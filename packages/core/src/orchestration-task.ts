@@ -21,9 +21,7 @@ export interface ExternalBinding {
 	boundAt: string;
 }
 
-export type TaskMessageSource =
-	| { type: "cli" }
-	| { type: "agent"; sessionId: string };
+export type TaskMessageSource = { type: "cli" } | { type: "agent"; sessionId: string };
 
 export interface TaskMessage {
 	id: string;
@@ -35,6 +33,8 @@ export interface TaskMessage {
 }
 
 export interface CreateTaskInput {
+	/** When provided, used as the task's local UUID. Callers must ensure uniqueness. */
+	id?: string;
 	title: string;
 	slug?: string;
 }
@@ -66,10 +66,7 @@ export interface ITaskStore {
 
 	addBinding(input: CreateBindingInput): Promise<ExternalBinding>;
 	getBindings(taskId: string): Promise<ExternalBinding[]>;
-	findTaskByBinding(
-		platform: string,
-		externalId: string,
-	): Promise<OrchestrationTask | null>;
+	findTaskByBinding(platform: string, externalId: string): Promise<OrchestrationTask | null>;
 
 	addTaskMessage(input: CreateTaskMessageInput): Promise<TaskMessage>;
 	getTaskMessages(taskId: string): Promise<TaskMessage[]>;
