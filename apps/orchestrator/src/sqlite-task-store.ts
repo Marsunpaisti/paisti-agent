@@ -8,7 +8,7 @@ import type {
 	ITaskStore,
 	OrchestrationTask,
 	TaskMessage,
-	TaskStatus,
+	TaskStatus
 } from "@paisti/core";
 
 export class SqliteTaskStore implements ITaskStore {
@@ -65,7 +65,7 @@ export class SqliteTaskStore implements ITaskStore {
 		this.db.run(
 			`INSERT INTO orchestration_tasks (id, slug, title, status, created_at, updated_at)
 			 VALUES (?, ?, ?, 'open', ?, ?)`,
-			[id, input.slug ?? null, input.title, now, now],
+			[id, input.slug ?? null, input.title, now, now]
 		);
 		return {
 			id,
@@ -73,7 +73,7 @@ export class SqliteTaskStore implements ITaskStore {
 			title: input.title,
 			status: "open",
 			createdAt: now,
-			updatedAt: now,
+			updatedAt: now
 		};
 	}
 
@@ -93,21 +93,21 @@ export class SqliteTaskStore implements ITaskStore {
 
 	async updateTask(
 		id: string,
-		patch: Partial<Pick<OrchestrationTask, "title" | "status">>,
+		patch: Partial<Pick<OrchestrationTask, "title" | "status">>
 	): Promise<OrchestrationTask> {
 		const now = new Date().toISOString();
 		if (patch.title !== undefined) {
 			this.db.run(`UPDATE orchestration_tasks SET title = ?, updated_at = ? WHERE id = ?`, [
 				patch.title,
 				now,
-				id,
+				id
 			]);
 		}
 		if (patch.status !== undefined) {
 			this.db.run(`UPDATE orchestration_tasks SET status = ?, updated_at = ? WHERE id = ?`, [
 				patch.status,
 				now,
-				id,
+				id
 			]);
 		}
 		const updated = await this.getTask(id);
@@ -119,7 +119,7 @@ export class SqliteTaskStore implements ITaskStore {
 		if (filter?.status) {
 			const rows = this.db
 				.query<RawTask, string>(
-					`SELECT * FROM orchestration_tasks WHERE status = ? ORDER BY created_at DESC`,
+					`SELECT * FROM orchestration_tasks WHERE status = ? ORDER BY created_at DESC`
 				)
 				.all(filter.status);
 			return rows.map(toTask);
@@ -145,8 +145,8 @@ export class SqliteTaskStore implements ITaskStore {
 				input.externalId,
 				input.externalUrl ?? null,
 				input.role,
-				now,
-			],
+				now
+			]
 		);
 		return {
 			id,
@@ -155,14 +155,14 @@ export class SqliteTaskStore implements ITaskStore {
 			externalId: input.externalId,
 			...(input.externalUrl ? { externalUrl: input.externalUrl } : {}),
 			role: input.role,
-			boundAt: now,
+			boundAt: now
 		};
 	}
 
 	async getBindings(taskId: string): Promise<ExternalBinding[]> {
 		const rows = this.db
 			.query<RawBinding, string>(
-				`SELECT * FROM external_bindings WHERE task_id = ? ORDER BY bound_at ASC`,
+				`SELECT * FROM external_bindings WHERE task_id = ? ORDER BY bound_at ASC`
 			)
 			.all(taskId);
 		return rows.map(toBinding);
@@ -173,7 +173,7 @@ export class SqliteTaskStore implements ITaskStore {
 			.query<RawTask, [string, string]>(
 				`SELECT t.* FROM orchestration_tasks t
 				 JOIN external_bindings b ON t.id = b.task_id
-				 WHERE b.platform = ? AND b.external_id = ?`,
+				 WHERE b.platform = ? AND b.external_id = ?`
 			)
 			.get(platform, externalId);
 		return row ? toTask(row) : null;
@@ -187,7 +187,7 @@ export class SqliteTaskStore implements ITaskStore {
 			`INSERT INTO task_messages
 			 (id, task_id, content, author, timestamp, source_type, source_session_id)
 			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			[id, input.taskId, input.content, input.author, now, input.source.type, sessionId],
+			[id, input.taskId, input.content, input.author, now, input.source.type, sessionId]
 		);
 		return {
 			id,
@@ -195,14 +195,14 @@ export class SqliteTaskStore implements ITaskStore {
 			content: input.content,
 			author: input.author,
 			timestamp: now,
-			source: input.source,
+			source: input.source
 		};
 	}
 
 	async getTaskMessages(taskId: string): Promise<TaskMessage[]> {
 		const rows = this.db
 			.query<RawMessage, string>(
-				`SELECT * FROM task_messages WHERE task_id = ? ORDER BY timestamp ASC`,
+				`SELECT * FROM task_messages WHERE task_id = ? ORDER BY timestamp ASC`
 			)
 			.all(taskId);
 		return rows.map(toMessage);
@@ -249,7 +249,7 @@ function toTask(row: RawTask): OrchestrationTask {
 		title: row.title,
 		status: row.status as TaskStatus,
 		createdAt: row.created_at,
-		updatedAt: row.updated_at,
+		updatedAt: row.updated_at
 	};
 }
 
@@ -261,7 +261,7 @@ function toBinding(row: RawBinding): ExternalBinding {
 		externalId: row.external_id,
 		...(row.external_url ? { externalUrl: row.external_url } : {}),
 		role: row.role as ExternalBinding["role"],
-		boundAt: row.bound_at,
+		boundAt: row.bound_at
 	};
 }
 
@@ -276,6 +276,6 @@ function toMessage(row: RawMessage): TaskMessage {
 		content: row.content,
 		author: row.author,
 		timestamp: row.timestamp,
-		source,
+		source
 	};
 }

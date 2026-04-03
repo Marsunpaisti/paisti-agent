@@ -60,7 +60,7 @@ export interface ITaskStore {
 	getTaskBySlug(slug: string): Promise<OrchestrationTask | null>;
 	updateTask(
 		id: string,
-		patch: Partial<Pick<OrchestrationTask, "title" | "status">>,
+		patch: Partial<Pick<OrchestrationTask, "title" | "status">>
 	): Promise<OrchestrationTask>;
 	listTasks(filter?: { status?: TaskStatus }): Promise<OrchestrationTask[]>;
 

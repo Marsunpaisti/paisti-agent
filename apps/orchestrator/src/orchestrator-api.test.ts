@@ -46,15 +46,15 @@ function minimalMessages(sessionId = "ses_1"): AgentMessage[] {
 			provider: "claude",
 			sessionId,
 			model: "claude-opus-4-6",
-			tools: [],
+			tools: []
 		},
 		{
 			type: "result",
 			provider: "claude",
 			sessionId,
 			finishReason: "end_turn",
-			durationMs: 500,
-		},
+			durationMs: 500
+		}
 	];
 }
 
@@ -71,7 +71,7 @@ function buildApi(messages: AgentMessage[] = minimalMessages()): OrchestratorAPI
 		runner,
 		taskStore: store,
 		activityWriter: writer,
-		workingDirectory: "/tmp",
+		workingDirectory: "/tmp"
 	});
 }
 
@@ -123,7 +123,7 @@ describe("runTask — task resolution", () => {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: crypto.randomUUID() },
 			title: "Fix auth bug",
-			initialMessage: "Fix the authentication bug",
+			initialMessage: "Fix the authentication bug"
 		};
 		await api.runTask(event);
 		const tasks = await store.listTasks();
@@ -136,7 +136,7 @@ describe("runTask — task resolution", () => {
 			type: "task_assigned",
 			taskRef: { platform: "linear", id: "ENG-42" },
 			title: "Fix auth bug",
-			initialMessage: "Fix the authentication bug",
+			initialMessage: "Fix the authentication bug"
 		};
 		await api.runTask(event);
 		const tasks = await store.listTasks();
@@ -152,7 +152,7 @@ describe("runTask — task resolution", () => {
 			type: "task_assigned",
 			taskRef: { platform: "linear", id: "ENG-42" },
 			title: "Fix auth bug",
-			initialMessage: "Fix the authentication bug",
+			initialMessage: "Fix the authentication bug"
 		};
 		// First run creates the task
 		await api.runTask(event);
@@ -172,7 +172,7 @@ describe("runTask — task status transitions", () => {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: crypto.randomUUID() },
 			title: "Fix auth bug",
-			initialMessage: "Fix the authentication bug",
+			initialMessage: "Fix the authentication bug"
 		};
 		await api.runTask(event);
 		const tasks = await store.listTasks({ status: "completed" });
@@ -181,13 +181,13 @@ describe("runTask — task status transitions", () => {
 
 	it("marks task completed even when session ends with error finish reason", async () => {
 		api = buildApi([
-			{ type: "result", provider: "claude", sessionId: "s1", finishReason: "error", durationMs: 0 },
+			{ type: "result", provider: "claude", sessionId: "s1", finishReason: "error", durationMs: 0 }
 		]);
 		const event: TaskAssignedEvent = {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: crypto.randomUUID() },
 			title: "Fix auth bug",
-			initialMessage: "Fix the authentication bug",
+			initialMessage: "Fix the authentication bug"
 		};
 		await api.runTask(event);
 		const tasks = await store.listTasks({ status: "completed" });
@@ -203,21 +203,21 @@ describe("runTask — activity writing", () => {
 				type: "assistant",
 				provider: "claude",
 				sessionId: "s1",
-				parts: [{ type: "text", text: "I will fix the bug." }],
+				parts: [{ type: "text", text: "I will fix the bug." }]
 			},
 			{
 				type: "result",
 				provider: "claude",
 				sessionId: "s1",
 				finishReason: "end_turn",
-				durationMs: 100,
-			},
+				durationMs: 100
+			}
 		]);
 		const event: TaskAssignedEvent = {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: crypto.randomUUID() },
 			title: "Fix bug",
-			initialMessage: "Fix the bug",
+			initialMessage: "Fix the bug"
 		};
 		await api.runTask(event);
 		const thoughts = writer.activities.filter((a) => a.activity.type === "thought");
@@ -234,21 +234,21 @@ describe("runTask — activity writing", () => {
 				sessionId: "s1",
 				callId: "c1",
 				toolName: "Read",
-				input: { file_path: "src/auth.ts" },
+				input: { file_path: "src/auth.ts" }
 			},
 			{
 				type: "result",
 				provider: "claude",
 				sessionId: "s1",
 				finishReason: "end_turn",
-				durationMs: 100,
-			},
+				durationMs: 100
+			}
 		]);
 		const event: TaskAssignedEvent = {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: crypto.randomUUID() },
 			title: "Fix bug",
-			initialMessage: "Fix the bug",
+			initialMessage: "Fix the bug"
 		};
 		await api.runTask(event);
 		const actions = writer.activities.filter((a) => a.activity.type === "action");
@@ -256,7 +256,7 @@ describe("runTask — activity writing", () => {
 		expect(actions[0].activity).toMatchObject({
 			type: "action",
 			description: "Read: src/auth.ts",
-			isError: false,
+			isError: false
 		});
 	});
 
@@ -269,15 +269,15 @@ describe("runTask — activity writing", () => {
 				sessionId: "s1",
 				finishReason: "end_turn",
 				durationMs: 300,
-				summary: "I fixed the authentication bug in src/auth.ts",
-			},
+				summary: "I fixed the authentication bug in src/auth.ts"
+			}
 		]);
 		const taskId = crypto.randomUUID();
 		const event: TaskAssignedEvent = {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: taskId },
 			title: "Fix bug",
-			initialMessage: "Fix the bug",
+			initialMessage: "Fix the bug"
 		};
 		await api.runTask(event);
 		expect(writer.responses).toHaveLength(1);
@@ -289,7 +289,7 @@ describe("runTask — activity writing", () => {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: crypto.randomUUID() },
 			title: "Fix bug",
-			initialMessage: "Fix the bug",
+			initialMessage: "Fix the bug"
 		});
 		expect(writer.responses).toHaveLength(0);
 	});
@@ -301,21 +301,21 @@ describe("runTask — activity writing", () => {
 				type: "assistant",
 				provider: "claude",
 				sessionId: "s1",
-				parts: [{ type: "text", text: "Working on it." }],
+				parts: [{ type: "text", text: "Working on it." }]
 			},
 			{
 				type: "result",
 				provider: "claude",
 				sessionId: "s1",
 				finishReason: "end_turn",
-				durationMs: 100,
-			},
+				durationMs: 100
+			}
 		]);
 		const event: TaskAssignedEvent = {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: crypto.randomUUID() },
 			title: "Fix bug",
-			initialMessage: "Fix the bug",
+			initialMessage: "Fix the bug"
 		};
 		await api.runTask(event);
 		const tasks = await store.listTasks();
@@ -332,7 +332,7 @@ describe("runTask — session tracking", () => {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: crypto.randomUUID() },
 			title: "Fix bug",
-			initialMessage: "Fix the bug",
+			initialMessage: "Fix the bug"
 		};
 		await api.runTask(event);
 		// After completion, health should report 0 active sessions
@@ -352,7 +352,7 @@ describe("handleEvent — user_comment with no active session", () => {
 			type: "task_assigned",
 			taskRef: { platform: "cli", id: taskId },
 			title: "Fix bug",
-			initialMessage: "Fix the bug",
+			initialMessage: "Fix the bug"
 		});
 		const tasks = await store.listTasks();
 		const dbTaskId = tasks[0].id;
@@ -361,7 +361,7 @@ describe("handleEvent — user_comment with no active session", () => {
 		api.handleEvent({
 			type: "user_comment",
 			taskRef: { platform: "cli", id: taskId },
-			content: "Also fix the error message",
+			content: "Also fix the error message"
 		});
 		// Give the micro-task queue time to flush
 		await Bun.sleep(10);

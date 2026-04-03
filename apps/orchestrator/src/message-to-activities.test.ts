@@ -15,7 +15,7 @@ function toolUse(toolName: string, input: unknown): AgentMessage {
 		sessionId: SESSION,
 		callId: "c1",
 		toolName,
-		input,
+		input
 	};
 }
 
@@ -27,7 +27,7 @@ function toolResult(toolName: string, isError: boolean): AgentMessage {
 		callId: "c1",
 		toolName,
 		output: "out",
-		isError,
+		isError
 	};
 }
 
@@ -41,7 +41,7 @@ describe("messageToActivities", () => {
 				provider: PROVIDER,
 				sessionId: SESSION,
 				model: "claude-opus-4-6",
-				tools: ["Read", "Write"],
+				tools: ["Read", "Write"]
 			};
 			expect(messageToActivities(msg)).toEqual([]);
 		});
@@ -51,7 +51,7 @@ describe("messageToActivities", () => {
 				type: "user",
 				provider: PROVIDER,
 				sessionId: SESSION,
-				content: "hello",
+				content: "hello"
 			};
 			expect(messageToActivities(msg)).toEqual([]);
 		});
@@ -62,7 +62,7 @@ describe("messageToActivities", () => {
 				provider: PROVIDER,
 				sessionId: SESSION,
 				finishReason: "end_turn",
-				durationMs: 1200,
+				durationMs: 1200
 			};
 			expect(messageToActivities(msg)).toEqual([]);
 		});
@@ -76,20 +76,20 @@ describe("messageToActivities", () => {
 				sessionId: SESSION,
 				parts: [
 					{ type: "text", text: "I'll look at the file first." },
-					{ type: "text", text: "Then fix the bug." },
-				],
+					{ type: "text", text: "Then fix the bug." }
+				]
 			};
 			const activities = messageToActivities(msg);
 			expect(activities).toHaveLength(2);
 			expect(activities[0]).toEqual<ThoughtActivity>({
 				type: "thought",
 				text: "I'll look at the file first.",
-				ephemeral: true,
+				ephemeral: true
 			});
 			expect(activities[1]).toEqual<ThoughtActivity>({
 				type: "thought",
 				text: "Then fix the bug.",
-				ephemeral: true,
+				ephemeral: true
 			});
 		});
 
@@ -98,7 +98,7 @@ describe("messageToActivities", () => {
 				type: "assistant",
 				provider: PROVIDER,
 				sessionId: SESSION,
-				parts: [{ type: "text", text: "   \n\t  " }],
+				parts: [{ type: "text", text: "   \n\t  " }]
 			};
 			expect(messageToActivities(msg)).toEqual([]);
 		});
@@ -108,7 +108,7 @@ describe("messageToActivities", () => {
 				type: "assistant",
 				provider: PROVIDER,
 				sessionId: SESSION,
-				parts: [{ type: "thinking", text: "internal reasoning..." }],
+				parts: [{ type: "thinking", text: "internal reasoning..." }]
 			};
 			expect(messageToActivities(msg)).toEqual([]);
 		});
@@ -118,7 +118,7 @@ describe("messageToActivities", () => {
 				type: "assistant",
 				provider: PROVIDER,
 				sessionId: SESSION,
-				parts: [{ type: "tool_call", callId: "c1", toolName: "Bash", input: { command: "ls" } }],
+				parts: [{ type: "tool_call", callId: "c1", toolName: "Bash", input: { command: "ls" } }]
 			};
 			expect(messageToActivities(msg)).toEqual([]);
 		});
@@ -131,8 +131,8 @@ describe("messageToActivities", () => {
 				parts: [
 					{ type: "thinking", text: "hm..." },
 					{ type: "text", text: "Let me check the logs." },
-					{ type: "tool_call", callId: "c1", toolName: "Read", input: { file_path: "log.txt" } },
-				],
+					{ type: "tool_call", callId: "c1", toolName: "Read", input: { file_path: "log.txt" } }
+				]
 			};
 			const activities = messageToActivities(msg);
 			expect(activities).toHaveLength(1);
@@ -144,7 +144,7 @@ describe("messageToActivities", () => {
 				type: "assistant",
 				provider: PROVIDER,
 				sessionId: SESSION,
-				parts: [],
+				parts: []
 			};
 			expect(messageToActivities(msg)).toEqual([]);
 		});
@@ -198,7 +198,7 @@ describe("messageToActivities", () => {
 
 		it("unknown tool with string-valued property: uses first string value", () => {
 			const activity = messageToActivities(
-				toolUse("CustomTool", { url: "https://example.com" }),
+				toolUse("CustomTool", { url: "https://example.com" })
 			)[0];
 			expect((activity as ActionActivity).description).toBe("CustomTool: https://example.com");
 		});

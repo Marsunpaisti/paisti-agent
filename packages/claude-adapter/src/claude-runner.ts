@@ -1,7 +1,7 @@
 import type {
 	McpHttpServerConfig,
 	McpStdioServerConfig,
-	Options,
+	Options
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type {
@@ -9,7 +9,7 @@ import type {
 	IAgentRunner,
 	McpServerConfig,
 	RunConfig,
-	SessionResultMessage,
+	SessionResultMessage
 } from "@paisti/core";
 import { toAgentMessages } from "./message-map.js";
 import { StreamingPrompt } from "./streaming-prompt.js";
@@ -92,7 +92,7 @@ export class ClaudeRunner implements IAgentRunner {
 		const claudeDefaults: Record<string, unknown> = {
 			settingSources: ["project", "local"],
 			permissionMode: "bypassPermissions",
-			allowDangerouslySkipPermissions: true,
+			allowDangerouslySkipPermissions: true
 		};
 
 		const claudeOverrides =
@@ -107,7 +107,7 @@ export class ClaudeRunner implements IAgentRunner {
 			...(config.allowedTools ? { allowedTools: config.allowedTools } : {}),
 			...(config.disallowedTools ? { disallowedTools: config.disallowedTools } : {}),
 			...(config.mcpServers ? { mcpServers: mapMcpServers(config.mcpServers) } : {}),
-			...(config.resumeSessionId ? { resume: config.resumeSessionId } : {}),
+			...(config.resumeSessionId ? { resume: config.resumeSessionId } : {})
 		};
 
 		return { ...base, ...claudeDefaults, ...claudeOverrides } as Options;
@@ -119,7 +119,7 @@ export class ClaudeRunner implements IAgentRunner {
 			provider: PROVIDER,
 			sessionId: "",
 			finishReason: stopped ? "stopped" : "error",
-			durationMs: 0,
+			durationMs: 0
 		};
 	}
 
@@ -129,7 +129,7 @@ export class ClaudeRunner implements IAgentRunner {
 			provider: PROVIDER,
 			sessionId: "",
 			finishReason: "error",
-			durationMs: 0,
+			durationMs: 0
 		};
 	}
 }
@@ -148,7 +148,7 @@ function isAbortError(err: unknown): boolean {
  * Uses McpStdioServerConfig for command-based servers and McpHttpServerConfig for URL-based.
  */
 function mapMcpServers(
-	servers: Record<string, McpServerConfig>,
+	servers: Record<string, McpServerConfig>
 ): Record<string, McpStdioServerConfig | McpHttpServerConfig> {
 	const result: Record<string, McpStdioServerConfig | McpHttpServerConfig> = {};
 	for (const [name, cfg] of Object.entries(servers)) {
@@ -156,14 +156,14 @@ function mapMcpServers(
 			const entry: McpStdioServerConfig = {
 				command: cfg.command,
 				...(cfg.args ? { args: cfg.args } : {}),
-				...(cfg.env ? { env: cfg.env } : {}),
+				...(cfg.env ? { env: cfg.env } : {})
 			};
 			result[name] = entry;
 		} else if (cfg.url) {
 			const entry: McpHttpServerConfig = {
 				type: "http",
 				url: cfg.url,
-				...(cfg.headers ? { headers: cfg.headers } : {}),
+				...(cfg.headers ? { headers: cfg.headers } : {})
 			};
 			result[name] = entry;
 		}

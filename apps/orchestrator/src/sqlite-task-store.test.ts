@@ -106,7 +106,7 @@ describe("updateTask", () => {
 		await Bun.sleep(2);
 		const updated = await store.updateTask(task.id, { status: "active" });
 		expect(new Date(updated.updatedAt).getTime()).toBeGreaterThanOrEqual(
-			new Date(task.updatedAt).getTime(),
+			new Date(task.updatedAt).getTime()
 		);
 	});
 
@@ -164,7 +164,7 @@ describe("bindings", () => {
 			taskId: task.id,
 			platform: "linear",
 			externalId: "ENG-123",
-			role: "source",
+			role: "source"
 		});
 		expect(binding.platform).toBe("linear");
 		expect(binding.externalId).toBe("ENG-123");
@@ -179,7 +179,7 @@ describe("bindings", () => {
 			platform: "linear",
 			externalId: "ENG-123",
 			externalUrl: "https://linear.app/team/ENG-123",
-			role: "source",
+			role: "source"
 		});
 		expect(binding.externalUrl).toBe("https://linear.app/team/ENG-123");
 	});
@@ -190,7 +190,7 @@ describe("bindings", () => {
 			taskId: task.id,
 			platform: "linear",
 			externalId: "ENG-123",
-			role: "source",
+			role: "source"
 		});
 		expect(binding.externalUrl).toBeUndefined();
 	});
@@ -201,14 +201,14 @@ describe("bindings", () => {
 			taskId: task.id,
 			platform: "linear",
 			externalId: "ENG-123",
-			role: "source",
+			role: "source"
 		});
 		// Should not throw
 		await store.addBinding({
 			taskId: task.id,
 			platform: "linear",
 			externalId: "ENG-123",
-			role: "source",
+			role: "source"
 		});
 		const bindings = await store.getBindings(task.id);
 		expect(bindings).toHaveLength(1);
@@ -220,13 +220,13 @@ describe("bindings", () => {
 			taskId: task.id,
 			platform: "linear",
 			externalId: "ENG-1",
-			role: "source",
+			role: "source"
 		});
 		await store.addBinding({
 			taskId: task.id,
 			platform: "github",
 			externalId: "PR-99",
-			role: "artifact",
+			role: "artifact"
 		});
 		const bindings = await store.getBindings(task.id);
 		expect(bindings).toHaveLength(2);
@@ -243,7 +243,7 @@ describe("bindings", () => {
 			taskId: task.id,
 			platform: "linear",
 			externalId: "ENG-123",
-			role: "source",
+			role: "source"
 		});
 		const found = await store.findTaskByBinding("linear", "ENG-123");
 		expect(found).not.toBeNull();
@@ -260,7 +260,7 @@ describe("bindings", () => {
 			taskId: task.id,
 			platform: "linear",
 			externalId: "ENG-123",
-			role: "source",
+			role: "source"
 		});
 		// Same externalId but different platform → not found
 		expect(await store.findTaskByBinding("github", "ENG-123")).toBeNull();
@@ -276,7 +276,7 @@ describe("task messages", () => {
 			taskId: task.id,
 			content: "Please also fix the error handling",
 			author: "user",
-			source: { type: "cli" },
+			source: { type: "cli" }
 		});
 		expect(msg.taskId).toBe(task.id);
 		expect(msg.content).toBe("Please also fix the error handling");
@@ -289,7 +289,7 @@ describe("task messages", () => {
 			taskId: task.id,
 			content: "Done — I fixed the bug.",
 			author: "agent",
-			source: { type: "agent", sessionId: "ses_abc" },
+			source: { type: "agent", sessionId: "ses_abc" }
 		});
 		expect(msg.source).toEqual({ type: "agent", sessionId: "ses_abc" });
 	});
@@ -300,19 +300,19 @@ describe("task messages", () => {
 			taskId: task.id,
 			content: "first",
 			author: "user",
-			source: { type: "cli" },
+			source: { type: "cli" }
 		});
 		await store.addTaskMessage({
 			taskId: task.id,
 			content: "second",
 			author: "user",
-			source: { type: "cli" },
+			source: { type: "cli" }
 		});
 		await store.addTaskMessage({
 			taskId: task.id,
 			content: "third",
 			author: "user",
-			source: { type: "cli" },
+			source: { type: "cli" }
 		});
 		const messages = await store.getTaskMessages(task.id);
 		expect(messages.map((m) => m.content)).toEqual(["first", "second", "third"]);
@@ -330,7 +330,7 @@ describe("task messages", () => {
 			taskId: t1.id,
 			content: "belongs to t1",
 			author: "user",
-			source: { type: "cli" },
+			source: { type: "cli" }
 		});
 		expect(await store.getTaskMessages(t2.id)).toEqual([]);
 	});

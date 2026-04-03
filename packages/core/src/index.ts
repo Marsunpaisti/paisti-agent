@@ -8,13 +8,13 @@ export type {
 	TokenUsage,
 	ToolResultMessage,
 	ToolUseMessage,
-	UserMessage,
+	UserMessage
 } from "./agent-messages.js";
 
 export type {
 	IAgentRunner,
 	McpServerConfig,
-	RunConfig,
+	RunConfig
 } from "./agent-runner.js";
 
 export type {
@@ -27,5 +27,5 @@ export type {
 	OrchestrationTask,
 	TaskMessage,
 	TaskMessageSource,
-	TaskStatus,
+	TaskStatus
 } from "./orchestration-task.js";

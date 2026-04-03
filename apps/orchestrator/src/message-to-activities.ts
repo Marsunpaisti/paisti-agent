@@ -34,8 +34,8 @@ export function messageToActivities(message: AgentMessage): Activity[] {
 				{
 					type: "action",
 					description: formatToolDescription(message.toolName, message.input),
-					isError: false,
-				},
+					isError: false
+				}
 			];
 
 		case "tool_result":
@@ -44,8 +44,8 @@ export function messageToActivities(message: AgentMessage): Activity[] {
 				{
 					type: "action",
 					description: formatToolDescription(message.toolName, {}),
-					isError: true,
-				},
+					isError: true
+				}
 			];
 	}
 }

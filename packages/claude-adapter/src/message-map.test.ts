@@ -6,7 +6,7 @@ import type {
 	SystemInfoMessage,
 	ToolResultMessage,
 	ToolUseMessage,
-	UserMessage,
+	UserMessage
 } from "@paisti/core";
 import { toAgentMessages } from "./message-map.js";
 
@@ -28,7 +28,7 @@ describe("system messages", () => {
 			subtype: "init",
 			session_id: SESSION,
 			model: "claude-opus-4-6",
-			tools: ["Read", "Write", "Bash"],
+			tools: ["Read", "Write", "Bash"]
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect(msgs).toHaveLength(1);
@@ -54,8 +54,8 @@ describe("assistant messages", () => {
 			type: "assistant",
 			session_id: SESSION,
 			message: {
-				content: [{ type: "text", text: "I will help you." }],
-			},
+				content: [{ type: "text", text: "I will help you." }]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect(msgs).toHaveLength(1);
@@ -72,8 +72,8 @@ describe("assistant messages", () => {
 			type: "assistant",
 			session_id: SESSION,
 			message: {
-				content: [{ type: "thinking", thinking: "internal reasoning here" }],
-			},
+				content: [{ type: "thinking", thinking: "internal reasoning here" }]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		const msg = msgs[0] as AssistantMessage;
@@ -86,9 +86,9 @@ describe("assistant messages", () => {
 			session_id: SESSION,
 			message: {
 				content: [
-					{ type: "tool_use", id: "tu_1", name: "Read", input: { file_path: "src/auth.ts" } },
-				],
-			},
+					{ type: "tool_use", id: "tu_1", name: "Read", input: { file_path: "src/auth.ts" } }
+				]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect(msgs).toHaveLength(2);
@@ -99,7 +99,7 @@ describe("assistant messages", () => {
 			type: "tool_call",
 			callId: "tu_1",
 			toolName: "Read",
-			input: { file_path: "src/auth.ts" },
+			input: { file_path: "src/auth.ts" }
 		});
 
 		const toolUse = msgs[1] as ToolUseMessage;
@@ -117,9 +117,9 @@ describe("assistant messages", () => {
 			message: {
 				content: [
 					{ type: "text", text: "Let me read the file." },
-					{ type: "tool_use", id: "tu_2", name: "Read", input: { file_path: "src/auth.ts" } },
-				],
-			},
+					{ type: "tool_use", id: "tu_2", name: "Read", input: { file_path: "src/auth.ts" } }
+				]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		// AssistantMessage + ToolUseMessage
@@ -140,9 +140,9 @@ describe("assistant messages", () => {
 					input_tokens: 100,
 					output_tokens: 50,
 					cache_read_input_tokens: 0,
-					cache_creation_input_tokens: 0,
-				},
-			},
+					cache_creation_input_tokens: 0
+				}
+			}
 		});
 		const msg = toAgentMessages(raw, PROVIDER)[0] as AssistantMessage;
 		expect(msg.usage).toMatchObject({ input: 100, output: 50 });
@@ -158,9 +158,9 @@ describe("assistant messages", () => {
 					input_tokens: 10,
 					output_tokens: 5,
 					cache_read_input_tokens: 0,
-					cache_creation_input_tokens: 0,
-				},
-			},
+					cache_creation_input_tokens: 0
+				}
+			}
 		});
 		const msg = toAgentMessages(raw, PROVIDER)[0] as AssistantMessage;
 		expect(msg.usage?.cacheRead).toBeUndefined();
@@ -176,9 +176,9 @@ describe("assistant messages", () => {
 					input_tokens: 10,
 					output_tokens: 5,
 					cache_read_input_tokens: 200,
-					cache_creation_input_tokens: 0,
-				},
-			},
+					cache_creation_input_tokens: 0
+				}
+			}
 		});
 		const msg = toAgentMessages(raw, PROVIDER)[0] as AssistantMessage;
 		expect(msg.usage?.cacheRead).toBe(200);
@@ -194,9 +194,9 @@ describe("assistant messages", () => {
 					input_tokens: 10,
 					output_tokens: 5,
 					cache_read_input_tokens: 0,
-					cache_creation_input_tokens: 50,
-				},
-			},
+					cache_creation_input_tokens: 50
+				}
+			}
 		});
 		const msg = toAgentMessages(raw, PROVIDER)[0] as AssistantMessage;
 		expect(msg.usage?.cacheWrite).toBe(50);
@@ -206,7 +206,7 @@ describe("assistant messages", () => {
 		const raw = sdk({
 			type: "assistant",
 			session_id: SESSION,
-			message: { content: [{ type: "text", text: "hi" }] },
+			message: { content: [{ type: "text", text: "hi" }] }
 		});
 		const msg = toAgentMessages(raw, PROVIDER)[0] as AssistantMessage;
 		expect(msg.usage).toBeUndefined();
@@ -226,9 +226,9 @@ describe("assistant messages", () => {
 			message: {
 				content: [
 					{ type: "server_tool_use", id: "x", name: "WebSearch", input: {} },
-					{ type: "text", text: "result" },
-				],
-			},
+					{ type: "text", text: "result" }
+				]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		const assistant = msgs[0] as AssistantMessage;
@@ -245,7 +245,7 @@ describe("user messages", () => {
 		const raw = sdk({
 			type: "user",
 			session_id: SESSION,
-			message: { role: "user", content: "Please also check the tests" },
+			message: { role: "user", content: "Please also check the tests" }
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect(msgs).toHaveLength(1);
@@ -266,10 +266,10 @@ describe("user messages", () => {
 						type: "tool_result",
 						tool_use_id: "tu_1",
 						content: "file contents here",
-						is_error: false,
-					},
-				],
-			},
+						is_error: false
+					}
+				]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect(msgs).toHaveLength(1);
@@ -292,10 +292,10 @@ describe("user messages", () => {
 						type: "tool_result",
 						tool_use_id: "tu_2",
 						content: "command not found",
-						is_error: true,
-					},
-				],
-			},
+						is_error: true
+					}
+				]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect((msgs[0] as ToolResultMessage).isError).toBe(true);
@@ -313,12 +313,12 @@ describe("user messages", () => {
 						tool_use_id: "tu_3",
 						content: [
 							{ type: "text", text: "line one" },
-							{ type: "text", text: "line two" },
+							{ type: "text", text: "line two" }
 						],
-						is_error: false,
-					},
-				],
-			},
+						is_error: false
+					}
+				]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect((msgs[0] as ToolResultMessage).output).toBe("line oneline two");
@@ -332,9 +332,9 @@ describe("user messages", () => {
 				role: "user",
 				content: [
 					{ type: "tool_result", tool_use_id: "tu_1", content: "out1", is_error: false },
-					{ type: "tool_result", tool_use_id: "tu_2", content: "out2", is_error: true },
-				],
-			},
+					{ type: "tool_result", tool_use_id: "tu_2", content: "out2", is_error: true }
+				]
+			}
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect(msgs).toHaveLength(2);
@@ -346,7 +346,7 @@ describe("user messages", () => {
 		const raw = sdk({
 			type: "user",
 			// no session_id
-			message: { role: "user", content: "hello" },
+			message: { role: "user", content: "hello" }
 		});
 		const msgs = toAgentMessages(raw, PROVIDER);
 		expect((msgs[0] as UserMessage).sessionId).toBe("");
@@ -366,9 +366,9 @@ describe("result messages", () => {
 				input_tokens: 100,
 				output_tokens: 40,
 				cache_read_input_tokens: 0,
-				cache_creation_input_tokens: 0,
+				cache_creation_input_tokens: 0
 			},
-			...extra,
+			...extra
 		});
 	}
 
@@ -392,7 +392,7 @@ describe("result messages", () => {
 	it("maps unknown subtype to error", () => {
 		const msg = toAgentMessages(
 			resultMsg("error_during_execution"),
-			PROVIDER,
+			PROVIDER
 		)[0] as SessionResultMessage;
 		expect(msg.finishReason).toBe("error");
 	});
@@ -400,7 +400,7 @@ describe("result messages", () => {
 	it("carries durationMs", () => {
 		const msg = toAgentMessages(
 			resultMsg("success", { result: "" }),
-			PROVIDER,
+			PROVIDER
 		)[0] as SessionResultMessage;
 		expect(msg.durationMs).toBe(1500);
 	});
@@ -408,7 +408,7 @@ describe("result messages", () => {
 	it("carries summary from result field on success", () => {
 		const msg = toAgentMessages(
 			resultMsg("success", { result: "Fixed the bug." }),
-			PROVIDER,
+			PROVIDER
 		)[0] as SessionResultMessage;
 		expect(msg.summary).toBe("Fixed the bug.");
 	});
@@ -421,7 +421,7 @@ describe("result messages", () => {
 	it("carries session id", () => {
 		const msg = toAgentMessages(
 			resultMsg("success", { result: "" }),
-			PROVIDER,
+			PROVIDER
 		)[0] as SessionResultMessage;
 		expect(msg.sessionId).toBe(SESSION);
 	});

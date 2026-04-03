@@ -55,7 +55,7 @@ export class StreamingPrompt implements AsyncIterable<SDKUserMessage> {
 		return {
 			type: "user",
 			message: { role: "user", content },
-			parent_tool_use_id: null,
+			parent_tool_use_id: null
 		};
 	}
 }

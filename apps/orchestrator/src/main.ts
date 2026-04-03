@@ -16,7 +16,7 @@ const orchestrator = new OrchestratorAPI({
 	activityWriter,
 	workingDirectory: process.cwd(),
 	...(process.env.MODEL ? { defaultModel: process.env.MODEL } : {}),
-	...(process.env.SYSTEM_PROMPT ? { systemPrompt: process.env.SYSTEM_PROMPT } : {}),
+	...(process.env.SYSTEM_PROMPT ? { systemPrompt: process.env.SYSTEM_PROMPT } : {})
 });
 
 await orchestrator.start(PORT);

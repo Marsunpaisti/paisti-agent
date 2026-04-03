@@ -56,7 +56,7 @@ export class OrchestratorAPI {
 		if (request.method === "GET" && url.pathname === "/health") {
 			return Response.json({
 				status: "ok",
-				activeSessions: this.activeSessions.size,
+				activeSessions: this.activeSessions.size
 			});
 		}
 
@@ -70,7 +70,7 @@ export class OrchestratorAPI {
 			port,
 			fetch(req) {
 				return self.fetch(req);
-			},
+			}
 		});
 		console.log(`[orchestrator] listening on port ${port}`);
 	}
@@ -108,7 +108,7 @@ export class OrchestratorAPI {
 	private async handleTaskAssigned(
 		taskRef: TaskRef,
 		title: string,
-		initialMessage: string,
+		initialMessage: string
 	): Promise<void> {
 		const task = await this.resolveOrCreateTask(taskRef, title);
 
@@ -122,7 +122,7 @@ export class OrchestratorAPI {
 		const session: ActiveSession = {
 			taskId: task.id,
 			runner: this.deps.runner,
-			status: "running",
+			status: "running"
 		};
 		this.activeSessions.set(task.id, session);
 
@@ -130,7 +130,7 @@ export class OrchestratorAPI {
 			workingDirectory: this.deps.workingDirectory ?? process.cwd(),
 			userPrompt: initialMessage,
 			...(this.deps.systemPrompt ? { systemPrompt: this.deps.systemPrompt } : {}),
-			...(this.deps.defaultModel ? { model: this.deps.defaultModel } : {}),
+			...(this.deps.defaultModel ? { model: this.deps.defaultModel } : {})
 		};
 
 		try {
@@ -171,7 +171,7 @@ export class OrchestratorAPI {
 				taskId: task.id,
 				content,
 				author: "user",
-				source: { type: "cli" },
+				source: { type: "cli" }
 			});
 		}
 	}
@@ -210,14 +210,14 @@ export class OrchestratorAPI {
 		// For CLI tasks, use taskRef.id as the task's local UUID so step 1 resolves on future calls.
 		const task = await this.deps.taskStore.createTask({
 			title,
-			...(taskRef.platform === "cli" ? { id: taskRef.id } : {}),
+			...(taskRef.platform === "cli" ? { id: taskRef.id } : {})
 		});
 		if (taskRef.platform !== "cli") {
 			await this.deps.taskStore.addBinding({
 				taskId: task.id,
 				platform: taskRef.platform,
 				externalId: taskRef.id,
-				role: "source",
+				role: "source"
 			});
 		}
 		return task;

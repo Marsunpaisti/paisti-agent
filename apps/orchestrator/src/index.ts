@@ -5,7 +5,7 @@ export type {
 	StopRequestedEvent,
 	TaskAssignedEvent,
 	TaskRef,
-	UserCommentEvent,
+	UserCommentEvent
 } from "./inbound-event.js";
 export { messageToActivities } from "./message-to-activities.js";
 export type { OrchestratorDeps } from "./orchestrator-api.js";

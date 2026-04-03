@@ -4,7 +4,7 @@ import type {
 	SDKResultMessage,
 	SDKSystemMessage,
 	SDKUserMessage,
-	SDKUserMessageReplay,
+	SDKUserMessageReplay
 } from "@anthropic-ai/claude-agent-sdk";
 import type {
 	AgentMessage,
@@ -15,7 +15,7 @@ import type {
 	SystemInfoMessage,
 	ToolResultMessage,
 	ToolUseMessage,
-	UserMessage,
+	UserMessage
 } from "@paisti/core";
 
 /**
@@ -45,7 +45,7 @@ export function toAgentMessages(raw: SDKMessage, provider: string): AgentMessage
 
 function fromSystem(
 	raw: Extract<SDKMessage, { type: "system" }>,
-	provider: string,
+	provider: string
 ): AgentMessage[] {
 	if (raw.subtype !== "init") return [];
 	const msg = raw as SDKSystemMessage;
@@ -54,7 +54,7 @@ function fromSystem(
 		provider,
 		sessionId: msg.session_id,
 		model: msg.model,
-		tools: msg.tools,
+		tools: msg.tools
 	};
 	return [out];
 }
@@ -80,7 +80,7 @@ function fromAssistant(raw: SDKAssistantMessage, provider: string): AgentMessage
 				sessionId: session_id,
 				callId: block.id,
 				toolName: block.name,
-				input: block.input,
+				input: block.input
 			});
 		}
 		// Ignore server_tool_use, redacted_thinking, and any future block types
@@ -95,7 +95,7 @@ function fromAssistant(raw: SDKAssistantMessage, provider: string): AgentMessage
 					: {}),
 				...(message.usage.cache_creation_input_tokens
 					? { cacheWrite: message.usage.cache_creation_input_tokens }
-					: {}),
+					: {})
 			}
 		: undefined;
 
@@ -105,7 +105,7 @@ function fromAssistant(raw: SDKAssistantMessage, provider: string): AgentMessage
 		sessionId: session_id,
 		parts,
 		...(usage ? { usage } : {}),
-		raw: message,
+		raw: message
 	};
 
 	return [assistantMsg, ...toolUseMessages];
@@ -123,7 +123,7 @@ function fromUser(raw: SDKUserMessage | SDKUserMessageReplay, provider: string):
 			type: "user",
 			provider,
 			sessionId,
-			content: message.content,
+			content: message.content
 		};
 		return [out];
 	}
@@ -151,7 +151,7 @@ function fromUser(raw: SDKUserMessage | SDKUserMessageReplay, provider: string):
 				callId: block.tool_use_id as string,
 				toolName: "", // SDK does not carry the tool name on tool_result blocks
 				output: content,
-				isError: Boolean(block.is_error),
+				isError: Boolean(block.is_error)
 			});
 		}
 	}
@@ -172,7 +172,7 @@ function fromResult(raw: SDKResultMessage, provider: string): SessionResultMessa
 					: {}),
 				...(raw.usage.cache_creation_input_tokens
 					? { cacheWrite: raw.usage.cache_creation_input_tokens }
-					: {}),
+					: {})
 			}
 		: undefined;
 
@@ -183,7 +183,7 @@ function fromResult(raw: SDKResultMessage, provider: string): SessionResultMessa
 		finishReason,
 		durationMs: raw.duration_ms,
 		summary: raw.subtype === "success" ? raw.result : undefined,
-		...(usage ? { usage } : {}),
+		...(usage ? { usage } : {})
 	};
 }
 
