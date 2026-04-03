@@ -1,11 +1,6 @@
-import type {
-	IActivityWriter,
-	IAgentRunner,
-	ITaskStore,
-	OrchestrationTask,
-	RunConfig
-} from "@paisti/core";
+import type { IAgentRunner, ITaskStore, OrchestrationTask, RunConfig } from "@paisti/core";
 import { messageToActivities } from "./message-to-activities.js";
+import type { ActivityService } from "./services/activity-service.js";
 import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./types/inbound-event.js";
 
 const CLI_PLATFORM = "cli";
@@ -14,7 +9,7 @@ export interface OrchestratorDeps {
 	/** Called once per task to produce an isolated runner instance. */
 	runnerFactory: () => IAgentRunner;
 	taskStore: ITaskStore;
-	activityWriter: IActivityWriter;
+	activityService: ActivityService;
 	/** Defaults to process.cwd(). Per-task worktrees are added in Phase 2. */
 	workingDirectory?: string;
 	defaultModel?: string;
@@ -162,11 +157,11 @@ export class OrchestratorAPI {
 
 				const activities = messageToActivities(msg);
 				for (const activity of activities) {
-					await this.deps.activityWriter.postActivity(task.id, activity);
+					await this.deps.activityService.postActivity(task.id, activity);
 				}
 
 				if (msg.type === "result" && msg.summary) {
-					await this.deps.activityWriter.postResponse(task.id, msg.summary);
+					await this.deps.activityService.postResponse(task.id, msg.summary);
 				}
 			}
 		} catch (err) {

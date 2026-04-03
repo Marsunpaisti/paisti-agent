@@ -7,6 +7,7 @@ import type {
 	RunConfig
 } from "@paisti/core";
 import { OrchestratorAPI } from "./orchestrator-api.js";
+import { ActivityService } from "./services/activity-service.js";
 import { SqliteTaskStore } from "./stores/sqlite-task-store.js";
 import type { TaskAssignedEvent } from "./types/inbound-event.js";
 
@@ -82,7 +83,7 @@ function buildApi(messages: AgentMessage[] = minimalMessages()): OrchestratorAPI
 	return new OrchestratorAPI({
 		runnerFactory: () => new MockRunner(messages),
 		taskStore: store,
-		activityWriter: writer,
+		activityService: new ActivityService([writer]),
 		workingDirectory: "/tmp"
 	});
 }
@@ -210,7 +211,7 @@ describe("runTask — task status transitions", () => {
 		api = new OrchestratorAPI({
 			runnerFactory: () => new ThrowingRunner(),
 			taskStore: store,
-			activityWriter: writer,
+			activityService: new ActivityService([writer]),
 			workingDirectory: "/tmp"
 		});
 		await api.runTask({
