@@ -7,6 +7,15 @@ import { SqliteTaskStore } from "./sqlite-task-store.js";
 
 // ─── test doubles ─────────────────────────────────────────────────────────────
 
+class ThrowingRunner implements IAgentRunner {
+	readonly supportsInjection = false;
+	// biome-ignore lint/correctness/useYield: intentionally throws without yielding to simulate a runner error
+	async *run(_config: RunConfig): AsyncIterable<AgentMessage> {
+		throw new Error("simulated runner failure");
+	}
+	async stop(): Promise<void> {}
+}
+
 class MockRunner implements IAgentRunner {
 	readonly supportsInjection = false;
 	injected: string[] = [];
@@ -189,6 +198,23 @@ describe("runTask — task status transitions", () => {
 		};
 		await api.runTask(event);
 		const tasks = await store.listTasks({ status: "completed" });
+		expect(tasks).toHaveLength(1);
+	});
+
+	it("marks task as failed when runner throws", async () => {
+		api = new OrchestratorAPI({
+			runnerFactory: () => new ThrowingRunner(),
+			taskStore: store,
+			activityWriter: writer,
+			workingDirectory: "/tmp"
+		});
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: crypto.randomUUID() },
+			title: "Fix auth bug",
+			initialMessage: "Fix the authentication bug"
+		});
+		const tasks = await store.listTasks({ status: "failed" });
 		expect(tasks).toHaveLength(1);
 	});
 });

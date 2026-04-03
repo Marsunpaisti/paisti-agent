@@ -19,3 +19,14 @@ const orchestrator = new OrchestratorAPI({
 });
 
 await orchestrator.start(PORT);
+
+const shutdown = async () => {
+	await orchestrator.stop();
+	process.exit(0);
+};
+process.on("SIGTERM", () => {
+	void shutdown();
+});
+process.on("SIGINT", () => {
+	void shutdown();
+});

@@ -121,6 +121,13 @@ describe("updateTask", () => {
 	it("throws for unknown id", async () => {
 		await expect(store.updateTask("no-such-id", { status: "active" })).rejects.toThrow();
 	});
+
+	it("empty patch is a no-op — returns the unchanged task", async () => {
+		const task = await store.createTask({ title: "Fix login" });
+		const result = await store.updateTask(task.id, {});
+		expect(result.title).toBe(task.title);
+		expect(result.status).toBe(task.status);
+	});
 });
 
 // ─── listTasks ────────────────────────────────────────────────────────────────

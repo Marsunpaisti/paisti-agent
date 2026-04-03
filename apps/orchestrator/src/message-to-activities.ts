@@ -43,13 +43,18 @@ export function messageToActivities(message: AgentMessage): Activity[] {
 			return [
 				{
 					type: "action",
-					description: formatToolDescription(message.toolName, {}),
+					description: formatToolDescription(message.toolName ?? "", {}),
 					isError: true
 				}
 			];
 	}
 }
 
+/**
+ * Formats a tool call into a human-readable description.
+ * Named tool branches cover Claude Code built-ins (Phase 1 is Claude-only).
+ * Other providers will fall through to the generic first-string-value path.
+ */
 function formatToolDescription(toolName: string, input: unknown): string {
 	if (typeof input !== "object" || input === null) {
 		return toolName;

@@ -3,6 +3,8 @@ import type { IActivityWriter } from "./activity.js";
 import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./inbound-event.js";
 import { messageToActivities } from "./message-to-activities.js";
 
+const CLI_PLATFORM = "cli";
+
 export interface OrchestratorDeps {
 	/** Called once per task to produce an isolated runner instance. */
 	runnerFactory: () => IAgentRunner;
@@ -53,7 +55,7 @@ export class OrchestratorAPI {
 		void p.finally(() => this.pendingEvents.delete(p));
 	}
 
-	/** Wait for all in-flight fire-and-forget events to settle. For test use. */
+	/** Wait for all in-flight fire-and-forget events to settle. */
 	async flush(): Promise<void> {
 		await Promise.all([...this.pendingEvents]);
 	}
@@ -91,6 +93,8 @@ export class OrchestratorAPI {
 			return s.runner.stop();
 		});
 		await Promise.all(stops);
+		// Wait for all runner loops to drain their finally blocks (DB writes, session cleanup)
+		await this.flush();
 
 		if (this.server) {
 			this.server.stop(true);
@@ -143,6 +147,7 @@ export class OrchestratorAPI {
 			...(this.deps.defaultModel ? { model: this.deps.defaultModel } : {})
 		};
 
+		let failed = false;
 		try {
 			for await (const msg of runner.run(config)) {
 				// Capture provider session ID from the first system message for future resume support
@@ -159,9 +164,12 @@ export class OrchestratorAPI {
 					await this.deps.activityWriter.postResponse(task.id, msg.summary);
 				}
 			}
+		} catch (err) {
+			failed = true;
+			console.error(`[orchestrator] task ${task.id} runner error:`, err);
 		} finally {
 			this.activeSessions.delete(task.id);
-			await this.deps.taskStore.updateTask(task.id, { status: "completed" });
+			await this.deps.taskStore.updateTask(task.id, { status: failed ? "failed" : "completed" });
 		}
 	}
 
@@ -173,6 +181,7 @@ export class OrchestratorAPI {
 		}
 
 		const session = this.activeSessions.get(task.id);
+		// biome-ignore lint/complexity/useOptionalChain: optional chain would break TypeScript narrowing needed for inject! below
 		if (session && session.runner.supportsInjection) {
 			session.runner.inject!(content);
 		} else {
@@ -207,7 +216,7 @@ export class OrchestratorAPI {
 	 */
 	private async resolveOrCreateTask(taskRef: TaskRef, title: string): Promise<OrchestrationTask> {
 		// Step 1: direct ID lookup (CLI tasks carry the local UUID as the ref ID)
-		if (taskRef.platform === "cli") {
+		if (taskRef.platform === CLI_PLATFORM) {
 			const task = await this.deps.taskStore.getTask(taskRef.id);
 			if (task) return task;
 		}
@@ -220,9 +229,9 @@ export class OrchestratorAPI {
 		// For CLI tasks, use taskRef.id as the task's local UUID so step 1 resolves on future calls.
 		const task = await this.deps.taskStore.createTask({
 			title,
-			...(taskRef.platform === "cli" ? { id: taskRef.id } : {})
+			...(taskRef.platform === CLI_PLATFORM ? { id: taskRef.id } : {})
 		});
-		if (taskRef.platform !== "cli") {
+		if (taskRef.platform !== CLI_PLATFORM) {
 			await this.deps.taskStore.addBinding({
 				taskId: task.id,
 				platform: taskRef.platform,
@@ -234,7 +243,7 @@ export class OrchestratorAPI {
 	}
 
 	private async resolveTask(taskRef: TaskRef): Promise<OrchestrationTask | null> {
-		if (taskRef.platform === "cli") {
+		if (taskRef.platform === CLI_PLATFORM) {
 			return this.deps.taskStore.getTask(taskRef.id);
 		}
 		return this.deps.taskStore.findTaskByBinding(taskRef.platform, taskRef.id);
