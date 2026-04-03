@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { AgentMessage } from "@paisti/core";
-import type { ActionActivity, ThoughtActivity } from "./activity.js";
+import type { ActionActivity, AgentMessage, ThoughtActivity } from "@paisti/core";
 import { messageToActivities } from "./message-to-activities.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────

@@ -1,5 +1,4 @@
-import type { AgentMessage } from "@paisti/core";
-import type { Activity } from "./activity.js";
+import type { Activity, AgentMessage } from "@paisti/core";
 
 /**
  * Pure function — no I/O. Converts a normalized AgentMessage to zero or more Activity objects.

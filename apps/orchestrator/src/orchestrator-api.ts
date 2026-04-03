@@ -1,7 +1,12 @@
-import type { IAgentRunner, ITaskStore, OrchestrationTask, RunConfig } from "@paisti/core";
-import type { IActivityWriter } from "./activity.js";
-import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./inbound-event.js";
+import type {
+	IActivityWriter,
+	IAgentRunner,
+	ITaskStore,
+	OrchestrationTask,
+	RunConfig
+} from "@paisti/core";
 import { messageToActivities } from "./message-to-activities.js";
+import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./types/inbound-event.js";
 
 const CLI_PLATFORM = "cli";
 

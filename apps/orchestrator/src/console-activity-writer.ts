@@ -1,4 +1,4 @@
-import type { Activity, IActivityWriter } from "./activity.js";
+import type { Activity, IActivityWriter } from "@paisti/core";
 
 /**
  * Simple IActivityWriter that prints activities to stdout.

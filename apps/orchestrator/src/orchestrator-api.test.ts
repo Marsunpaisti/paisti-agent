@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import type { AgentMessage, IAgentRunner, RunConfig } from "@paisti/core";
-import type { Activity, IActivityWriter } from "./activity.js";
-import type { TaskAssignedEvent } from "./inbound-event.js";
+import type {
+	Activity,
+	AgentMessage,
+	IActivityWriter,
+	IAgentRunner,
+	RunConfig
+} from "@paisti/core";
 import { OrchestratorAPI } from "./orchestrator-api.js";
 import { SqliteTaskStore } from "./sqlite-task-store.js";
+import type { TaskAssignedEvent } from "./types/inbound-event.js";
 
 // ─── test doubles ─────────────────────────────────────────────────────────────
 
