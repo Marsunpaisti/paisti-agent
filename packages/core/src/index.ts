@@ -1,3 +1,4 @@
+export type { ActionActivity, Activity, IActivityWriter, ThoughtActivity } from "./activity.js";
 export type {
 	AgentMessage,
 	AssistantMessage,
@@ -10,13 +11,11 @@ export type {
 	ToolUseMessage,
 	UserMessage
 } from "./agent-messages.js";
-
 export type {
 	IAgentRunner,
 	McpServerConfig,
 	RunConfig
 } from "./agent-runner.js";
-
 export type {
 	CreateBindingInput,
 	CreateTaskInput,
