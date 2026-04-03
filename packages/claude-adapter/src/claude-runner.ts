@@ -6,6 +6,7 @@ import type {
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type {
 	AgentMessage,
+	FinishReason,
 	IAgentRunner,
 	McpServerConfig,
 	RunConfig,
@@ -59,7 +60,7 @@ export class ClaudeRunner implements IAgentRunner {
 				stopped = true;
 			} else {
 				if (!emittedResult) {
-					yield this.errorResult(config);
+					yield this.syntheticResult("error");
 					emittedResult = true;
 				}
 				throw err;
@@ -73,7 +74,7 @@ export class ClaudeRunner implements IAgentRunner {
 		// If the SDK emitted one (success/error subtypes), we're done.
 		// If the loop ended via abort (stop() called), emit a synthetic "stopped" result.
 		if (!emittedResult) {
-			yield this.stoppedResult(stopped);
+			yield this.syntheticResult(stopped ? "stopped" : "error");
 		}
 	}
 
@@ -113,22 +114,12 @@ export class ClaudeRunner implements IAgentRunner {
 		return { ...base, ...claudeDefaults, ...claudeOverrides } as Options;
 	}
 
-	private stoppedResult(stopped: boolean): SessionResultMessage {
+	private syntheticResult(finishReason: FinishReason): SessionResultMessage {
 		return {
 			type: "result",
 			provider: PROVIDER,
 			sessionId: "",
-			finishReason: stopped ? "stopped" : "error",
-			durationMs: 0
-		};
-	}
-
-	private errorResult(_config: RunConfig): SessionResultMessage {
-		return {
-			type: "result",
-			provider: PROVIDER,
-			sessionId: "",
-			finishReason: "error",
+			finishReason,
 			durationMs: 0
 		};
 	}
@@ -152,20 +143,18 @@ function mapMcpServers(
 ): Record<string, McpStdioServerConfig | McpHttpServerConfig> {
 	const result: Record<string, McpStdioServerConfig | McpHttpServerConfig> = {};
 	for (const [name, cfg] of Object.entries(servers)) {
-		if (cfg.command) {
-			const entry: McpStdioServerConfig = {
+		if (cfg.type === "stdio") {
+			result[name] = {
 				command: cfg.command,
 				...(cfg.args ? { args: cfg.args } : {}),
 				...(cfg.env ? { env: cfg.env } : {})
 			};
-			result[name] = entry;
-		} else if (cfg.url) {
-			const entry: McpHttpServerConfig = {
+		} else {
+			result[name] = {
 				type: "http",
 				url: cfg.url,
 				...(cfg.headers ? { headers: cfg.headers } : {})
 			};
-			result[name] = entry;
 		}
 	}
 	return result;

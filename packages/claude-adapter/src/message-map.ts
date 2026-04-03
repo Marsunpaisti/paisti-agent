@@ -149,7 +149,6 @@ function fromUser(raw: SDKUserMessage | SDKUserMessageReplay, provider: string):
 				provider,
 				sessionId,
 				callId: block.tool_use_id as string,
-				toolName: "", // SDK does not carry the tool name on tool_result blocks
 				output: content,
 				isError: Boolean(block.is_error)
 			});
