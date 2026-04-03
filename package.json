@@ -10,7 +10,8 @@
 		"build": "bun run --filter='*' build",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"typecheck": "bun run --filter='*' typecheck"
+		"typecheck": "bun run --filter='*' typecheck",
+		"test": "bun run --filter='*' test"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.10",

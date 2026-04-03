@@ -8,3 +8,4 @@
 **/logs
 **/temp
 **/cache
+**/*.stackdump
