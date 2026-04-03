@@ -3,7 +3,7 @@ export { ConsoleActivityWriter } from "./console-activity-writer.js";
 export { messageToActivities } from "./message-to-activities.js";
 export type { OrchestratorDeps } from "./orchestrator-api.js";
 export { OrchestratorAPI } from "./orchestrator-api.js";
-export { SqliteTaskStore } from "./sqlite-task-store.js";
+export { SqliteTaskStore } from "./stores/sqlite-task-store.js";
 export type {
 	InboundEvent,
 	StopRequestedEvent,

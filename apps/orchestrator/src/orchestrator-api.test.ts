@@ -7,7 +7,7 @@ import type {
 	RunConfig
 } from "@paisti/core";
 import { OrchestratorAPI } from "./orchestrator-api.js";
-import { SqliteTaskStore } from "./sqlite-task-store.js";
+import { SqliteTaskStore } from "./stores/sqlite-task-store.js";
 import type { TaskAssignedEvent } from "./types/inbound-event.js";
 
 // ─── test doubles ─────────────────────────────────────────────────────────────
