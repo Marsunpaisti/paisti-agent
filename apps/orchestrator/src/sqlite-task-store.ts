@@ -96,20 +96,27 @@ export class SqliteTaskStore implements ITaskStore {
 		patch: Partial<Pick<OrchestrationTask, "title" | "status">>
 	): Promise<OrchestrationTask> {
 		const now = new Date().toISOString();
+		const setClauses: string[] = [];
+		const values: unknown[] = [];
+
 		if (patch.title !== undefined) {
-			this.db.run(`UPDATE orchestration_tasks SET title = ?, updated_at = ? WHERE id = ?`, [
-				patch.title,
-				now,
-				id
-			]);
+			setClauses.push("title = ?");
+			values.push(patch.title);
 		}
 		if (patch.status !== undefined) {
-			this.db.run(`UPDATE orchestration_tasks SET status = ?, updated_at = ? WHERE id = ?`, [
-				patch.status,
-				now,
-				id
-			]);
+			setClauses.push("status = ?");
+			values.push(patch.status);
 		}
+
+		if (setClauses.length > 0) {
+			setClauses.push("updated_at = ?");
+			values.push(now, id);
+			this.db.run(
+				`UPDATE orchestration_tasks SET ${setClauses.join(", ")} WHERE id = ?`,
+				values as string[]
+			);
+		}
+
 		const updated = await this.getTask(id);
 		if (!updated) throw new Error(`Task not found: ${id}`);
 		return updated;

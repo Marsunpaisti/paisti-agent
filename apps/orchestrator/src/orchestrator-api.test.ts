@@ -62,13 +62,11 @@ function minimalMessages(sessionId = "ses_1"): AgentMessage[] {
 
 let store: SqliteTaskStore;
 let writer: SpyWriter;
-let runner: MockRunner;
 let api: OrchestratorAPI;
 
 function buildApi(messages: AgentMessage[] = minimalMessages()): OrchestratorAPI {
-	runner = new MockRunner(messages);
 	return new OrchestratorAPI({
-		runner,
+		runnerFactory: () => new MockRunner(messages),
 		taskStore: store,
 		activityWriter: writer,
 		workingDirectory: "/tmp"
@@ -363,8 +361,7 @@ describe("handleEvent — user_comment with no active session", () => {
 			taskRef: { platform: "cli", id: taskId },
 			content: "Also fix the error message"
 		});
-		// Give the micro-task queue time to flush
-		await Bun.sleep(10);
+		await api.flush();
 
 		const messages = await store.getTaskMessages(dbTaskId);
 		expect(messages).toHaveLength(1);

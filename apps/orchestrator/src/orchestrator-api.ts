@@ -4,7 +4,8 @@ import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./inbound-event.j
 import { messageToActivities } from "./message-to-activities.js";
 
 export interface OrchestratorDeps {
-	runner: IAgentRunner;
+	/** Called once per task to produce an isolated runner instance. */
+	runnerFactory: () => IAgentRunner;
 	taskStore: ITaskStore;
 	activityWriter: IActivityWriter;
 	/** Defaults to process.cwd(). Per-task worktrees are added in Phase 2. */
@@ -24,6 +25,7 @@ interface ActiveSession {
 export class OrchestratorAPI {
 	private readonly deps: OrchestratorDeps;
 	private readonly activeSessions = new Map<string, ActiveSession>();
+	private readonly pendingEvents = new Set<Promise<void>>();
 	private server: ReturnType<typeof Bun.serve> | null = null;
 
 	constructor(deps: OrchestratorDeps) {
@@ -44,9 +46,16 @@ export class OrchestratorAPI {
 	 * Non-blocking — dispatches async handling and returns immediately.
 	 */
 	handleEvent(event: InboundEvent): void {
-		this.processEvent(event).catch((err) => {
+		const p = this.processEvent(event).catch((err) => {
 			console.error("[orchestrator] unhandled error in event handler:", err);
 		});
+		this.pendingEvents.add(p);
+		void p.finally(() => this.pendingEvents.delete(p));
+	}
+
+	/** Wait for all in-flight fire-and-forget events to settle. For test use. */
+	async flush(): Promise<void> {
+		await Promise.all([...this.pendingEvents]);
 	}
 
 	/** Bun.serve-compatible HTTP handler. */
@@ -119,9 +128,10 @@ export class OrchestratorAPI {
 
 		await this.deps.taskStore.updateTask(task.id, { status: "active" });
 
+		const runner = this.deps.runnerFactory();
 		const session: ActiveSession = {
 			taskId: task.id,
-			runner: this.deps.runner,
+			runner,
 			status: "running"
 		};
 		this.activeSessions.set(task.id, session);
@@ -134,7 +144,7 @@ export class OrchestratorAPI {
 		};
 
 		try {
-			for await (const msg of this.deps.runner.run(config)) {
+			for await (const msg of runner.run(config)) {
 				// Capture provider session ID from the first system message for future resume support
 				if (msg.type === "system" && !session.providerSessionId) {
 					session.providerSessionId = msg.sessionId;
@@ -163,8 +173,8 @@ export class OrchestratorAPI {
 		}
 
 		const session = this.activeSessions.get(task.id);
-		if (session && this.deps.runner.supportsInjection) {
-			this.deps.runner.inject!(content);
+		if (session && session.runner.supportsInjection) {
+			session.runner.inject!(content);
 		} else {
 			// No active session — store as TaskMessage for context in the next session
 			await this.deps.taskStore.addTaskMessage({

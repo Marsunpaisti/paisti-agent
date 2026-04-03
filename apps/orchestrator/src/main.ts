@@ -7,11 +7,10 @@ const PORT = Number(process.env.PORT ?? 3000);
 const DB_PATH = process.env.DB_PATH ?? "paisti.db";
 
 const taskStore = new SqliteTaskStore(DB_PATH);
-const runner = new ClaudeRunner();
 const activityWriter = new ConsoleActivityWriter();
 
 const orchestrator = new OrchestratorAPI({
-	runner,
+	runnerFactory: () => new ClaudeRunner(),
 	taskStore,
 	activityWriter,
 	workingDirectory: process.cwd(),
