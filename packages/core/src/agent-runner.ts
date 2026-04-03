@@ -1,15 +1,8 @@
 import type { AgentMessage } from "./agent-messages.js";
 
-export interface McpServerConfig {
-	type?: "stdio" | "http";
-	// stdio
-	command?: string;
-	args?: string[];
-	env?: Record<string, string>;
-	// http
-	url?: string;
-	headers?: Record<string, string>;
-}
+export type McpServerConfig =
+	| { type: "stdio"; command: string; args?: string[]; env?: Record<string, string> }
+	| { type: "http"; url: string; headers?: Record<string, string> };
 
 export interface RunConfig {
 	workingDirectory: string;

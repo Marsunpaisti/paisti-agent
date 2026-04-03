@@ -48,7 +48,8 @@ export interface ToolResultMessage {
 	provider: string;
 	sessionId: string;
 	callId: string;
-	toolName: string;
+	/** Absent when the SDK does not carry the tool name on the result block (e.g. Claude adapter). */
+	toolName?: string;
 	output: string;
 	isError: boolean;
 }

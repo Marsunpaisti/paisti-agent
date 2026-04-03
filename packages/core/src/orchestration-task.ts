@@ -1,4 +1,4 @@
-export type TaskStatus = "open" | "active" | "completed" | "archived";
+export type TaskStatus = "open" | "active" | "completed" | "failed" | "archived";
 
 export interface OrchestrationTask {
 	id: string;
