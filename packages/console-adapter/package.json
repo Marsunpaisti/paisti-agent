@@ -1,5 +1,5 @@
 {
-	"name": "@paisti/orchestrator",
+	"name": "@paisti/console-adapter",
 	"version": "0.0.1",
 	"private": true,
 	"module": "./src/index.ts",
@@ -8,16 +8,12 @@
 		".": "./src/index.ts"
 	},
 	"scripts": {
-		"start": "bun run src/main.ts",
-		"typecheck": "tsc --noEmit",
-		"test": "bun test"
+		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"bun-types": "1.3.11"
 	},
 	"dependencies": {
-		"@paisti/claude-adapter": "workspace:*",
-		"@paisti/console-adapter": "workspace:*",
 		"@paisti/core": "workspace:*"
 	}
 }
