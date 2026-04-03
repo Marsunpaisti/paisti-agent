@@ -1,26 +1,31 @@
 {
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
-  "permissions": {
-    "allow": [
-      "Bash(git *)",
-      "Bash(ls)",
-      "Bash(ls *)",
-      "Bash(cat *)",
-      "Bash(head *)",
-      "Bash(tail *)",
-      "Bash(grep *)",
-      "Bash(find *)",
-      "Bash(pwd)",
-      "Bash(echo *)",
-      "Bash(wc *)",
-      "Bash(stat *)",
-      "Bash(diff *)",
-      "Bash(which *)",
-      "Bash(type *)",
-      "WebSearch"
-    ]
-  }
+	"attribution": {
+		"commit": "",
+		"pr": ""
+	},
+	"permissions": {
+		"allow": [
+			"Bash(git *)",
+			"Bash(ls)",
+			"Bash(ls *)",
+			"Bash(cat *)",
+			"Bash(head *)",
+			"Bash(tail *)",
+			"Bash(grep *)",
+			"Bash(find *)",
+			"Bash(pwd)",
+			"Bash(echo *)",
+			"Bash(wc *)",
+			"Bash(stat *)",
+			"Bash(diff *)",
+			"Bash(which *)",
+			"Bash(type *)",
+			"Bash(bun test *)",
+			"Bash(bun typecheck *)",
+			"Bash(bun lint *)",
+			"Bash(bun lint:fix *)",
+			"Bash(bun build *)",
+			"WebSearch"
+		]
+	}
 }
