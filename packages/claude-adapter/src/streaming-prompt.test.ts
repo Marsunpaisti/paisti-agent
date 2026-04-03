@@ -1,28 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { StreamingPrompt } from "./streaming-prompt.js";
 
-// Helper: collect all messages from the iterable up to a timeout.
-async function collect(
-	prompt: StreamingPrompt,
-	opts: { close?: boolean; timeoutMs?: number } = {},
-): Promise<string[]> {
-	const results: string[] = [];
-	const { close = true, timeoutMs = 200 } = opts;
-
-	const iter = prompt[Symbol.asyncIterator]();
-	while (true) {
-		const raceResult = await Promise.race([
-			iter.next(),
-			Bun.sleep(timeoutMs).then(() => ({ done: true as const, value: undefined })),
-		]);
-		if (raceResult.done) break;
-		results.push(raceResult.value.message.content as string);
-	}
-
-	if (close) prompt.close();
-	return results;
-}
-
 describe("StreamingPrompt", () => {
 	it("yields the initial message immediately", async () => {
 		const prompt = new StreamingPrompt("hello world");
