@@ -1,10 +1,15 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
 	"files": {
-		"includes": ["**", "!**/dist", "!**/build", "!**/coverage", "!**/node_modules", "!**/dist-electron", "!**/.cursor"]
-	},
-	"organizeImports": {
-		"enabled": true
+		"includes": [
+			"**",
+			"!**/dist",
+			"!**/build",
+			"!**/coverage",
+			"!**/node_modules",
+			"!**/dist-electron",
+			"!**/.cursor"
+		]
 	},
 	"linter": {
 		"enabled": true,
@@ -14,9 +19,7 @@
 				"noNonNullAssertion": "off"
 			},
 			"suspicious": {
-				"noExplicitAny": "off",
-				"noArrayIndexKey": "off",
-				"noUnsafeDeclarationMerging": "off"
+				"noExplicitAny": "off"
 			}
 		},
 		"domains": {
