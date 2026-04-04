@@ -81,6 +81,12 @@ export class OrchestratorAPI {
 			});
 		}
 
+		if (request.method === "POST" && url.pathname === "/events") {
+			const body = (await request.json()) as InboundEvent;
+			this.handleEvent(body);
+			return new Response(null, { status: 202 });
+		}
+
 		return new Response("Not Found", { status: 404 });
 	}
 
