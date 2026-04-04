@@ -35,3 +35,4 @@ export type {
 	TaskMessageSource,
 	TaskStatus
 } from "./orchestration-task.js";
+export type { ITaskContextProvider } from "./task-context.js";
