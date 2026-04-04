@@ -4,6 +4,7 @@ import type {
 	AgentMessage,
 	IActivityWriter,
 	IAgentRunner,
+	ITaskContextProvider,
 	RunConfig
 } from "@paisti/core";
 import { OrchestratorAPI } from "./orchestrator-api.js";
@@ -73,6 +74,16 @@ class SpyWriter implements IActivityWriter {
 	async postResponse(taskId: string, summary: string): Promise<void> {
 		this.responses.push({ taskId, summary });
 	}
+}
+
+class CapturingRunner implements IAgentRunner {
+	capturedConfig?: RunConfig;
+	readonly supportsInjection = false;
+	async *run(config: RunConfig): AsyncIterable<AgentMessage> {
+		this.capturedConfig = config;
+		yield* minimalMessages();
+	}
+	async stop(): Promise<void> {}
 }
 
 // Minimal valid message sequence: system init → result
@@ -522,5 +533,74 @@ describe("runTask — session lifecycle", () => {
 		});
 		const task = await store.getTask(taskId);
 		expect(await sessionStore.getActiveSession(task!.id)).toBeNull();
+	});
+});
+
+// ─── contextProvider ─────────────────────────────────────────────────────────
+
+describe("runTask — contextProvider", () => {
+	it("prepends context to systemPrompt when contextProvider is set", async () => {
+		const capturing = new CapturingRunner();
+		const contextProvider: ITaskContextProvider = {
+			assembleContext: async () => "## Task context\n\nTask: Fix auth bug"
+		};
+		const contextApi = new OrchestratorAPI({
+			runnerFactory: () => capturing,
+			taskStore: store,
+			sessionStore,
+			activityService: new ActivityService([writer]),
+			workingDirectory: "/tmp",
+			contextProvider
+		});
+		await contextApi.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: crypto.randomUUID() },
+			title: "Fix auth bug",
+			initialMessage: "Fix the bug"
+		});
+		expect(capturing.capturedConfig?.systemPrompt).toContain("## Task context");
+	});
+
+	it("systemPrompt is absent when contextProvider is not set and no static systemPrompt", async () => {
+		const capturing = new CapturingRunner();
+		const noContextApi = new OrchestratorAPI({
+			runnerFactory: () => capturing,
+			taskStore: store,
+			sessionStore,
+			activityService: new ActivityService([writer]),
+			workingDirectory: "/tmp"
+		});
+		await noContextApi.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: crypto.randomUUID() },
+			title: "Fix auth bug",
+			initialMessage: "Fix the bug"
+		});
+		expect(capturing.capturedConfig?.systemPrompt).toBeUndefined();
+	});
+
+	it("prepends context before static systemPrompt with blank line separator", async () => {
+		const capturing = new CapturingRunner();
+		const contextProvider: ITaskContextProvider = {
+			assembleContext: async () => "## Task context\n\nTask: Fix auth bug"
+		};
+		const bothApi = new OrchestratorAPI({
+			runnerFactory: () => capturing,
+			taskStore: store,
+			sessionStore,
+			activityService: new ActivityService([writer]),
+			workingDirectory: "/tmp",
+			systemPrompt: "You are a helpful assistant.",
+			contextProvider
+		});
+		await bothApi.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: crypto.randomUUID() },
+			title: "Fix auth bug",
+			initialMessage: "Fix the bug"
+		});
+		expect(capturing.capturedConfig?.systemPrompt).toBe(
+			"## Task context\n\nTask: Fix auth bug\n\nYou are a helpful assistant."
+		);
 	});
 });

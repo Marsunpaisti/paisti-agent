@@ -2,6 +2,7 @@ import type {
 	AgentSessionStatus,
 	IAgentRunner,
 	ISessionStore,
+	ITaskContextProvider,
 	ITaskStore,
 	OrchestrationTask,
 	RunConfig
@@ -18,6 +19,7 @@ export interface OrchestratorDeps {
 	taskStore: ITaskStore;
 	sessionStore: ISessionStore;
 	activityService: ActivityService;
+	contextProvider?: ITaskContextProvider;
 	/** Defaults to process.cwd(). Per-task worktrees are added in Phase 2. */
 	workingDirectory?: string;
 	defaultModel?: string;
@@ -159,10 +161,18 @@ export class OrchestratorAPI {
 		};
 		this.activeSessions.set(agentSession.id, inMemorySession);
 
+		const context = this.deps.contextProvider
+			? await this.deps.contextProvider.assembleContext(task)
+			: undefined;
+
+		const systemPrompt =
+			[context, this.deps.systemPrompt].filter((s): s is string => s !== undefined).join("\n\n") ||
+			undefined;
+
 		const config: RunConfig = {
 			workingDirectory: this.deps.workingDirectory ?? process.cwd(),
 			userPrompt: initialMessage,
-			...(this.deps.systemPrompt ? { systemPrompt: this.deps.systemPrompt } : {}),
+			...(systemPrompt ? { systemPrompt } : {}),
 			...(this.deps.defaultModel ? { model: this.deps.defaultModel } : {})
 		};
 
