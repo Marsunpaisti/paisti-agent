@@ -1,4 +1,11 @@
-import type { IAgentRunner, ITaskStore, OrchestrationTask, RunConfig } from "@paisti/core";
+import type {
+	AgentSessionStatus,
+	IAgentRunner,
+	ISessionStore,
+	ITaskStore,
+	OrchestrationTask,
+	RunConfig
+} from "@paisti/core";
 import { messageToActivities } from "./message-to-activities.js";
 import type { ActivityService } from "./services/activity-service.js";
 import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./types/inbound-event.js";
@@ -9,6 +16,7 @@ export interface OrchestratorDeps {
 	/** Called once per task to produce an isolated runner instance. */
 	runnerFactory: () => IAgentRunner;
 	taskStore: ITaskStore;
+	sessionStore: ISessionStore;
 	activityService: ActivityService;
 	/** Defaults to process.cwd(). Per-task worktrees are added in Phase 2. */
 	workingDirectory?: string;
@@ -18,6 +26,7 @@ export interface OrchestratorDeps {
 
 interface ActiveSession {
 	taskId: string;
+	sessionId: string; // AgentSession.id
 	/** Provider-native session ID, captured from the first SystemInfoMessage. */
 	providerSessionId?: string;
 	runner: IAgentRunner;
@@ -26,6 +35,7 @@ interface ActiveSession {
 
 export class OrchestratorAPI {
 	private readonly deps: OrchestratorDeps;
+	/** Keyed by AgentSession.id (not taskId) to support multiple sessions per task later. */
 	private readonly activeSessions = new Map<string, ActiveSession>();
 	private readonly pendingEvents = new Set<Promise<void>>();
 	private server: ReturnType<typeof Bun.serve> | null = null;
@@ -125,20 +135,23 @@ export class OrchestratorAPI {
 	): Promise<void> {
 		const task = await this.resolveOrCreateTask(taskRef, title);
 
-		if (this.activeSessions.has(task.id)) {
+		// Guard uses in-memory map (not store) to avoid race with a finishing finally block
+		if (this.getActiveSessionForTask(task.id)) {
 			console.log(`[orchestrator] task ${task.id} already active — ignoring duplicate event`);
 			return;
 		}
 
 		await this.deps.taskStore.updateTask(task.id, { status: "active" });
 
+		const agentSession = await this.deps.sessionStore.createSession({ taskId: task.id });
 		const runner = this.deps.runnerFactory();
-		const session: ActiveSession = {
+		const inMemorySession: ActiveSession = {
 			taskId: task.id,
+			sessionId: agentSession.id,
 			runner,
 			status: "running"
 		};
-		this.activeSessions.set(task.id, session);
+		this.activeSessions.set(agentSession.id, inMemorySession);
 
 		const config: RunConfig = {
 			workingDirectory: this.deps.workingDirectory ?? process.cwd(),
@@ -147,12 +160,18 @@ export class OrchestratorAPI {
 			...(this.deps.defaultModel ? { model: this.deps.defaultModel } : {})
 		};
 
-		let failed = false;
+		let finalStatus: AgentSessionStatus = "completed";
 		try {
 			for await (const msg of runner.run(config)) {
-				// Capture provider session ID from the first system message for future resume support
-				if (msg.type === "system" && !session.providerSessionId) {
-					session.providerSessionId = msg.sessionId;
+				if (msg.type === "system" && !inMemorySession.providerSessionId) {
+					inMemorySession.providerSessionId = msg.sessionId;
+					await this.deps.sessionStore.updateSession(agentSession.id, {
+						providerSessionId: msg.sessionId
+					});
+				}
+
+				if (msg.type === "result" && msg.finishReason === "stopped") {
+					finalStatus = "stopped";
 				}
 
 				const activities = messageToActivities(msg);
@@ -165,11 +184,17 @@ export class OrchestratorAPI {
 				}
 			}
 		} catch (err) {
-			failed = true;
+			finalStatus = "failed";
 			console.error(`[orchestrator] task ${task.id} runner error:`, err);
 		} finally {
-			this.activeSessions.delete(task.id);
-			await this.deps.taskStore.updateTask(task.id, { status: failed ? "failed" : "completed" });
+			this.activeSessions.delete(agentSession.id);
+			await this.deps.sessionStore.updateSession(agentSession.id, {
+				status: finalStatus,
+				completedAt: new Date().toISOString()
+			});
+			await this.deps.taskStore.updateTask(task.id, {
+				status: finalStatus === "failed" ? "failed" : "completed"
+			});
 		}
 	}
 
@@ -180,7 +205,7 @@ export class OrchestratorAPI {
 			return;
 		}
 
-		const session = this.activeSessions.get(task.id);
+		const session = this.getActiveSessionForTask(task.id);
 		// biome-ignore lint/complexity/useOptionalChain: optional chain would break TypeScript narrowing needed for inject! below
 		if (session && session.runner.supportsInjection) {
 			session.runner.inject!(content);
@@ -199,11 +224,18 @@ export class OrchestratorAPI {
 		const task = await this.resolveTask(taskRef);
 		if (!task) return;
 
-		const session = this.activeSessions.get(task.id);
+		const session = this.getActiveSessionForTask(task.id);
 		if (session) {
 			await session.runner.stop();
 			// Cleanup is handled by the finally block in handleTaskAssigned
 		}
+	}
+
+	// ─── session helpers ────────────────────────────────────────────────────────
+
+	/** Find the in-memory active session for a given task. */
+	private getActiveSessionForTask(taskId: string): ActiveSession | undefined {
+		return [...this.activeSessions.values()].find((s) => s.taskId === taskId);
 	}
 
 	// ─── task resolution ────────────────────────────────────────────────────────

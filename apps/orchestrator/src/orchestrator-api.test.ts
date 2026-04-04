@@ -8,10 +8,32 @@ import type {
 } from "@paisti/core";
 import { OrchestratorAPI } from "./orchestrator-api.js";
 import { ActivityService } from "./services/activity-service.js";
+import { SqliteSessionStore } from "./stores/sqlite-session-store.js";
 import { SqliteTaskStore } from "./stores/sqlite-task-store.js";
 import type { TaskAssignedEvent } from "./types/inbound-event.js";
 
 // ─── test doubles ─────────────────────────────────────────────────────────────
+
+class StoppedRunner implements IAgentRunner {
+	readonly supportsInjection = false;
+	async *run(_config: RunConfig): AsyncIterable<AgentMessage> {
+		yield {
+			type: "system",
+			provider: "claude",
+			sessionId: "ses_stopped",
+			model: "claude-opus-4-6",
+			tools: []
+		};
+		yield {
+			type: "result",
+			provider: "claude",
+			sessionId: "ses_stopped",
+			finishReason: "stopped",
+			durationMs: 100
+		};
+	}
+	async stop(): Promise<void> {}
+}
 
 class ThrowingRunner implements IAgentRunner {
 	readonly supportsInjection = false;
@@ -76,6 +98,7 @@ function minimalMessages(sessionId = "ses_1"): AgentMessage[] {
 // ─── setup ────────────────────────────────────────────────────────────────────
 
 let store: SqliteTaskStore;
+let sessionStore: SqliteSessionStore;
 let writer: SpyWriter;
 let api: OrchestratorAPI;
 
@@ -83,6 +106,7 @@ function buildApi(messages: AgentMessage[] = minimalMessages()): OrchestratorAPI
 	return new OrchestratorAPI({
 		runnerFactory: () => new MockRunner(messages),
 		taskStore: store,
+		sessionStore,
 		activityService: new ActivityService([writer]),
 		workingDirectory: "/tmp"
 	});
@@ -90,6 +114,7 @@ function buildApi(messages: AgentMessage[] = minimalMessages()): OrchestratorAPI
 
 beforeEach(() => {
 	store = new SqliteTaskStore(":memory:");
+	sessionStore = new SqliteSessionStore();
 	writer = new SpyWriter();
 	api = buildApi();
 });
@@ -211,6 +236,7 @@ describe("runTask — task status transitions", () => {
 		api = new OrchestratorAPI({
 			runnerFactory: () => new ThrowingRunner(),
 			taskStore: store,
+			sessionStore,
 			activityService: new ActivityService([writer]),
 			workingDirectory: "/tmp"
 		});
@@ -399,5 +425,102 @@ describe("handleEvent — user_comment with no active session", () => {
 		expect(messages).toHaveLength(1);
 		expect(messages[0].content).toBe("Also fix the error message");
 		expect(messages[0].source).toEqual({ type: "cli" });
+	});
+});
+
+// ─── session lifecycle ────────────────────────────────────────────────────────
+
+describe("runTask — session lifecycle", () => {
+	it("creates a session record after task_assigned", async () => {
+		const taskId = crypto.randomUUID();
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "Fix bug",
+			initialMessage: "Fix the bug"
+		});
+		const task = await store.getTask(taskId);
+		const sessions = await sessionStore.listSessions(task!.id);
+		expect(sessions).toHaveLength(1);
+	});
+
+	it("transitions session to completed after successful run", async () => {
+		const taskId = crypto.randomUUID();
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "Fix bug",
+			initialMessage: "Fix the bug"
+		});
+		const task = await store.getTask(taskId);
+		const sessions = await sessionStore.listSessions(task!.id);
+		expect(sessions[0].status).toBe("completed");
+		expect(sessions[0].completedAt).toBeString();
+	});
+
+	it("captures providerSessionId from SystemInfoMessage", async () => {
+		const taskId = crypto.randomUUID();
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "Fix bug",
+			initialMessage: "Fix the bug"
+		});
+		// minimalMessages() uses sessionId "ses_1"
+		const task = await store.getTask(taskId);
+		const sessions = await sessionStore.listSessions(task!.id);
+		expect(sessions[0].providerSessionId).toBe("ses_1");
+	});
+
+	it("transitions session to failed when runner throws", async () => {
+		const failingApi = new OrchestratorAPI({
+			runnerFactory: () => new ThrowingRunner(),
+			taskStore: store,
+			sessionStore,
+			activityService: new ActivityService([writer]),
+			workingDirectory: "/tmp"
+		});
+		const taskId = crypto.randomUUID();
+		await failingApi.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "Fix bug",
+			initialMessage: "Fix the bug"
+		});
+		const task = await store.getTask(taskId);
+		const sessions = await sessionStore.listSessions(task!.id);
+		expect(sessions[0].status).toBe("failed");
+	});
+
+	it("transitions session to stopped when runner finishes with stopped reason", async () => {
+		const stoppedApi = new OrchestratorAPI({
+			runnerFactory: () => new StoppedRunner(),
+			taskStore: store,
+			sessionStore,
+			activityService: new ActivityService([writer]),
+			workingDirectory: "/tmp"
+		});
+		const taskId = crypto.randomUUID();
+		await stoppedApi.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "Fix bug",
+			initialMessage: "Fix the bug"
+		});
+		const task = await store.getTask(taskId);
+		const sessions = await sessionStore.listSessions(task!.id);
+		expect(sessions[0].status).toBe("stopped");
+	});
+
+	it("getActiveSession returns null after session completes", async () => {
+		const taskId = crypto.randomUUID();
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "Fix bug",
+			initialMessage: "Fix the bug"
+		});
+		const task = await store.getTask(taskId);
+		expect(await sessionStore.getActiveSession(task!.id)).toBeNull();
 	});
 });
