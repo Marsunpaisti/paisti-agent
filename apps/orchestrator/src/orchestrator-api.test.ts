@@ -603,4 +603,33 @@ describe("runTask — contextProvider", () => {
 			"## Task context\n\nTask: Fix auth bug\n\nYou are a helpful assistant."
 		);
 	});
+
+	it("transitions session to failed when contextProvider throws", async () => {
+		const failingContextApi = new OrchestratorAPI({
+			runnerFactory: () => new MockRunner(minimalMessages()),
+			taskStore: store,
+			sessionStore,
+			activityService: new ActivityService([writer]),
+			workingDirectory: "/tmp",
+			contextProvider: {
+				assembleContext: async () => {
+					throw new Error("context assembly failed");
+				}
+			}
+		});
+		const taskId = crypto.randomUUID();
+		await failingContextApi.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "Fix auth bug",
+			initialMessage: "Fix the bug"
+		});
+		const task = await store.getTask(taskId);
+		const sessions = await sessionStore.listSessions(task!.id);
+		expect(sessions[0].status).toBe("failed");
+		// Task and session should not be stuck as active
+		const res = await failingContextApi.fetch(new Request("http://localhost/health"));
+		const body = (await res.json()) as { activeSessions: number };
+		expect(body.activeSessions).toBe(0);
+	});
 });

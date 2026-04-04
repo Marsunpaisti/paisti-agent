@@ -161,23 +161,23 @@ export class OrchestratorAPI {
 		};
 		this.activeSessions.set(agentSession.id, inMemorySession);
 
-		const context = this.deps.contextProvider
-			? await this.deps.contextProvider.assembleContext(task)
-			: undefined;
-
-		const systemPrompt =
-			[context, this.deps.systemPrompt].filter((s): s is string => s !== undefined).join("\n\n") ||
-			undefined;
-
-		const config: RunConfig = {
-			workingDirectory: this.deps.workingDirectory ?? process.cwd(),
-			userPrompt: initialMessage,
-			...(systemPrompt ? { systemPrompt } : {}),
-			...(this.deps.defaultModel ? { model: this.deps.defaultModel } : {})
-		};
-
 		let finalStatus: AgentSessionStatus = "completed";
 		try {
+			const context = this.deps.contextProvider
+				? await this.deps.contextProvider.assembleContext(task)
+				: undefined;
+
+			// filter(Boolean) drops undefined and ""; || undefined ensures field absent (not "") when both are missing
+			const systemPrompt =
+				[context, this.deps.systemPrompt].filter(Boolean).join("\n\n") || undefined;
+
+			const config: RunConfig = {
+				workingDirectory: this.deps.workingDirectory ?? process.cwd(),
+				userPrompt: initialMessage,
+				...(systemPrompt ? { systemPrompt } : {}),
+				...(this.deps.defaultModel ? { model: this.deps.defaultModel } : {})
+			};
+
 			for await (const msg of runner.run(config)) {
 				if (msg.type === "system" && !inMemorySession.providerSessionId) {
 					inMemorySession.providerSessionId = msg.sessionId;
