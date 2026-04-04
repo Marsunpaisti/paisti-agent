@@ -77,7 +77,7 @@ CREATE TABLE agent_sessions (
 );
 ```
 
-Implemented by `SqliteSessionStore` in `apps/orchestrator/src/sqlite-session-store.ts`, following the same in-memory-safe constructor pattern as `SqliteTaskStore`.
+Implemented by `SqliteSessionStore` in `apps/orchestrator/src/stores/sqlite-session-store.ts`, following the same in-memory-safe constructor pattern as `SqliteTaskStore`.
 
 ## OrchestratorAPI Changes
 
@@ -88,7 +88,7 @@ interface OrchestratorDeps {
   runnerFactory: () => IAgentRunner;
   taskStore: ITaskStore;
   sessionStore: ISessionStore;   // new
-  activityWriter: IActivityWriter;
+  activityService: ActivityService;
   workingDirectory?: string;
   defaultModel?: string;
   systemPrompt?: string;
