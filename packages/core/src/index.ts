@@ -17,6 +17,13 @@ export type {
 	RunConfig
 } from "./agent-runner.js";
 export type {
+	AgentSession,
+	AgentSessionRole,
+	AgentSessionStatus,
+	CreateSessionInput,
+	ISessionStore
+} from "./agent-session.js";
+export type {
 	CreateBindingInput,
 	CreateTaskInput,
 	CreateTaskMessageInput,
