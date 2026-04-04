@@ -35,6 +35,7 @@ export class LocalTaskContextProvider implements ITaskContextProvider {
 		if (pastSessions.length > 0) {
 			lines.push("", "Past sessions:");
 			for (const s of pastSessions) {
+				// completedAt is always set for terminal sessions; startedAt is a safe fallback if not
 				const date = (s.completedAt ?? s.startedAt).split("T")[0];
 				const rolePrefix = s.role ? `${s.role} ` : "";
 				lines.push(`- ${rolePrefix}(${s.status}, ${date})`);
@@ -46,6 +47,7 @@ export class LocalTaskContextProvider implements ITaskContextProvider {
 			for (let i = 0; i < messages.length; i++) {
 				const m = messages[i];
 				const ts = m.timestamp.slice(0, 16);
+				// TODO: truncate long message content before injecting into system prompts (Phase 3+)
 				lines.push(`${i + 1}. [${m.author}, ${ts}] ${m.content}`);
 			}
 		}

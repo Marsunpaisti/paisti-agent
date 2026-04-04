@@ -11,7 +11,7 @@ let task: OrchestrationTask;
 
 beforeEach(async () => {
 	taskStore = new SqliteTaskStore(":memory:");
-	sessionStore = new SqliteSessionStore();
+	sessionStore = new SqliteSessionStore(":memory:");
 	provider = new LocalTaskContextProvider(taskStore, sessionStore);
 	task = await taskStore.createTask({ title: "Fix auth bug" });
 });
@@ -83,6 +83,20 @@ describe("assembleContext", () => {
 		await sessionStore.createSession({ taskId: task.id }); // stays active
 		const ctx = await provider.assembleContext(task);
 		expect(ctx).not.toContain("Past sessions:");
+	});
+
+	it("shows completed sessions but not active ones when both exist", async () => {
+		const completed = await sessionStore.createSession({ taskId: task.id, role: "discussion" });
+		await sessionStore.updateSession(completed.id, {
+			status: "completed",
+			completedAt: "2026-04-03T10:00:00.000Z"
+		});
+		await sessionStore.createSession({ taskId: task.id }); // stays active
+		const ctx = await provider.assembleContext(task);
+		expect(ctx).toContain("Past sessions:");
+		expect(ctx).toContain("- discussion (completed, 2026-04-03)");
+		// The active session should not appear
+		expect(ctx).not.toContain("active");
 	});
 
 	it("omits Past sessions section when no past sessions", async () => {
