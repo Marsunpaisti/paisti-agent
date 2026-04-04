@@ -90,7 +90,7 @@ export class SqliteSessionStore implements ISessionStore {
 	async listSessions(taskId: string): Promise<AgentSession[]> {
 		const rows = this.db
 			.query<RawSession, string>(
-				`SELECT * FROM agent_sessions WHERE task_id = ? ORDER BY started_at ASC`
+				`SELECT * FROM agent_sessions WHERE task_id = ? ORDER BY started_at ASC, rowid ASC`
 			)
 			.all(taskId);
 		return rows.map(toSession);
