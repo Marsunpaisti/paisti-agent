@@ -99,7 +99,7 @@ export class SqliteSessionStore implements ISessionStore {
 	async getActiveSession(taskId: string): Promise<AgentSession | null> {
 		const row = this.db
 			.query<RawSession, [string, string]>(
-				`SELECT * FROM agent_sessions WHERE task_id = ? AND status = ? LIMIT 1`
+				`SELECT * FROM agent_sessions WHERE task_id = ? AND status = ? ORDER BY rowid ASC LIMIT 1`
 			)
 			.get(taskId, "active");
 		return row ? toSession(row) : null;
