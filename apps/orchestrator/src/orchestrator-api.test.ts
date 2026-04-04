@@ -627,9 +627,33 @@ describe("runTask — contextProvider", () => {
 		const task = await store.getTask(taskId);
 		const sessions = await sessionStore.listSessions(task!.id);
 		expect(sessions[0].status).toBe("failed");
+		expect(task!.status).toBe("failed");
 		// Task and session should not be stuck as active
 		const res = await failingContextApi.fetch(new Request("http://localhost/health"));
 		const body = (await res.json()) as { activeSessions: number };
 		expect(body.activeSessions).toBe(0);
+	});
+
+	it("treats empty-string context as absent — systemPrompt falls through to static only", async () => {
+		const capturing = new CapturingRunner();
+		const emptyContextApi = new OrchestratorAPI({
+			runnerFactory: () => capturing,
+			taskStore: store,
+			sessionStore,
+			activityService: new ActivityService([writer]),
+			workingDirectory: "/tmp",
+			systemPrompt: "You are a helpful assistant.",
+			contextProvider: {
+				assembleContext: async () => ""
+			}
+		});
+		await emptyContextApi.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: crypto.randomUUID() },
+			title: "Fix auth bug",
+			initialMessage: "Fix the bug"
+		});
+		// filter(Boolean) drops "", so only the static systemPrompt remains
+		expect(capturing.capturedConfig?.systemPrompt).toBe("You are a helpful assistant.");
 	});
 });
