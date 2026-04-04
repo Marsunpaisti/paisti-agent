@@ -131,6 +131,22 @@ describe("assembleContext", () => {
 		expect(ctx).not.toContain("Messages:");
 	});
 
+	it("normalizes newlines in message content to spaces", async () => {
+		await taskStore.addTaskMessage({
+			taskId: task.id,
+			content: "Fix this:\n- point A\n- point B",
+			author: "user",
+			source: { type: "cli" }
+		});
+		const ctx = await provider.assembleContext(task);
+		// newlines replaced with spaces — list format stays intact
+		expect(ctx).toContain("Fix this: - point A - point B");
+		// no raw newlines inside the message line
+		const messageLine = ctx.split("\n").find((l) => l.startsWith("1."));
+		expect(messageLine).toBeDefined();
+		expect(messageLine).not.toContain("\n");
+	});
+
 	it("renders all sections in correct order when task has bindings, past sessions, and messages", async () => {
 		await taskStore.addBinding({
 			taskId: task.id,
