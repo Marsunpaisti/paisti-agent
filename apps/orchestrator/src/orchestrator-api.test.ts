@@ -750,3 +750,47 @@ describe("GET /api/sessions/:id/stream", () => {
 		expect(res.status).toBe(404);
 	});
 });
+
+describe("fetch — POST /events validation", () => {
+	it("returns 400 for invalid JSON", async () => {
+		const res = await api.fetch(
+			new Request("http://localhost/events", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: "not json"
+			})
+		);
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 400 for unknown event type", async () => {
+		const res = await api.fetch(
+			new Request("http://localhost/events", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ type: "unknown_event" })
+			})
+		);
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 202 with taskId for task_assigned event", async () => {
+		const taskId = crypto.randomUUID();
+		const res = await api.fetch(
+			new Request("http://localhost/events", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					type: "task_assigned",
+					taskRef: { platform: "cli", id: taskId },
+					title: "Test task",
+					initialMessage: "Do the thing"
+				})
+			})
+		);
+		expect(res.status).toBe(202);
+		const body = (await res.json()) as { taskId: string };
+		expect(body.taskId).toBe(taskId);
+		await api.flush();
+	});
+});

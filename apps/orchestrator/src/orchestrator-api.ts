@@ -1,7 +1,8 @@
 import type {
 	AgentSessionStatus,
-	IAgentMessageStore,
+	IAgentMessageReader,
 	IAgentRunner,
+	ISessionMessageWriter,
 	ISessionStore,
 	ITaskContextProvider,
 	ITaskStore,
@@ -12,11 +13,14 @@ import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { messageToActivities } from "./message-to-activities.js";
 import type { ActivityService } from "./services/activity-service.js";
-import type { MessageService } from "./services/message-service.js";
-import type { SseBroadcaster } from "./services/sse-broadcaster.js";
 import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./types/inbound-event.js";
 
 const CLI_PLATFORM = "cli";
+
+interface ISseRegistrar {
+	register(sessionId: string, controller: ReadableStreamDefaultController<Uint8Array>): void;
+	unregister(sessionId: string, controller: ReadableStreamDefaultController<Uint8Array>): void;
+}
 
 export interface OrchestratorDeps {
 	/** Called once per task to produce an isolated runner instance. */
@@ -24,9 +28,9 @@ export interface OrchestratorDeps {
 	taskStore: ITaskStore;
 	sessionStore: ISessionStore;
 	activityService: ActivityService;
-	agentMessageStore?: IAgentMessageStore;
-	messageService?: MessageService;
-	sseBroadcaster?: SseBroadcaster;
+	agentMessageStore?: IAgentMessageReader;
+	messageService?: ISessionMessageWriter;
+	sseBroadcaster?: ISseRegistrar;
 	contextProvider?: ITaskContextProvider;
 	/** Defaults to process.cwd(). Per-task worktrees are added in Phase 2. */
 	workingDirectory?: string;
@@ -51,11 +55,9 @@ export class OrchestratorAPI {
 	private readonly pendingEvents = new Set<Promise<void>>();
 	private server: ReturnType<typeof Bun.serve> | null = null;
 	private readonly app: Hono;
-	private sseBroadcaster?: SseBroadcaster;
 
 	constructor(deps: OrchestratorDeps) {
 		this.deps = deps;
-		this.sseBroadcaster = deps.sseBroadcaster;
 		this.app = new Hono();
 		this.setupRoutes();
 	}
@@ -92,7 +94,24 @@ export class OrchestratorAPI {
 		);
 
 		this.app.post("/events", async (c) => {
-			const body = (await c.req.json()) as InboundEvent;
+			let body: InboundEvent;
+			try {
+				body = (await c.req.json()) as InboundEvent;
+			} catch {
+				return c.json({ error: "Invalid JSON" }, 400);
+			}
+			const validTypes = new Set(["task_assigned", "user_comment", "stop_requested"]);
+			if (!body || typeof body !== "object" || !validTypes.has(body.type)) {
+				return c.json({ error: "Unknown event type" }, 400);
+			}
+
+			if (body.type === "task_assigned") {
+				// Eagerly create task so GET /api/tasks/:id resolves immediately after the 202
+				const task = await this.resolveOrCreateTask(body.taskRef, body.title);
+				this.handleEvent(body);
+				return c.json({ taskId: task.id }, 202);
+			}
+
 			this.handleEvent(body);
 			return c.body(null, 202);
 		});
@@ -132,10 +151,10 @@ export class OrchestratorAPI {
 			const stream = new ReadableStream<Uint8Array>({
 				start: (controller) => {
 					ctrl = controller;
-					this.sseBroadcaster?.register(sessionId, controller);
+					this.deps.sseBroadcaster?.register(sessionId, controller);
 				},
 				cancel: () => {
-					this.sseBroadcaster?.unregister(sessionId, ctrl);
+					this.deps.sseBroadcaster?.unregister(sessionId, ctrl);
 				}
 			});
 
@@ -153,7 +172,7 @@ export class OrchestratorAPI {
 			// Serve static assets
 			this.app.use("/*", serveStatic({ root }));
 			// SPA fallback — serve index.html for any unmatched route
-			this.app.get("/*", serveStatic({ path: `${root}/index.html` }));
+			this.app.get("/*", serveStatic({ root, path: "index.html" }));
 		}
 	}
 
