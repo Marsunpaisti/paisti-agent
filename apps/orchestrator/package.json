@@ -18,6 +18,7 @@
 	"dependencies": {
 		"@paisti/claude-adapter": "workspace:*",
 		"@paisti/console-adapter": "workspace:*",
-		"@paisti/core": "workspace:*"
+		"@paisti/core": "workspace:*",
+		"hono": "4.12.10"
 	}
 }

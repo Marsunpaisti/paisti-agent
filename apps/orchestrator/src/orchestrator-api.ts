@@ -1,5 +1,6 @@
 import type {
 	AgentSessionStatus,
+	IAgentMessageStore,
 	IAgentRunner,
 	ISessionStore,
 	ITaskContextProvider,
@@ -7,8 +8,10 @@ import type {
 	OrchestrationTask,
 	RunConfig
 } from "@paisti/core";
+import { Hono } from "hono";
 import { messageToActivities } from "./message-to-activities.js";
 import type { ActivityService } from "./services/activity-service.js";
+import type { SseBroadcaster } from "./services/sse-broadcaster.js";
 import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./types/inbound-event.js";
 
 const CLI_PLATFORM = "cli";
@@ -19,11 +22,13 @@ export interface OrchestratorDeps {
 	taskStore: ITaskStore;
 	sessionStore: ISessionStore;
 	activityService: ActivityService;
+	agentMessageStore?: IAgentMessageStore;
 	contextProvider?: ITaskContextProvider;
 	/** Defaults to process.cwd(). Per-task worktrees are added in Phase 2. */
 	workingDirectory?: string;
 	defaultModel?: string;
 	systemPrompt?: string;
+	serveUiFrom?: string;
 }
 
 interface ActiveSession {
@@ -41,9 +46,13 @@ export class OrchestratorAPI {
 	private readonly activeSessions = new Map<string, ActiveSession>();
 	private readonly pendingEvents = new Set<Promise<void>>();
 	private server: ReturnType<typeof Bun.serve> | null = null;
+	private readonly app: Hono;
+	private sseBroadcaster?: SseBroadcaster;
 
 	constructor(deps: OrchestratorDeps) {
 		this.deps = deps;
+		this.app = new Hono();
+		this.setupRoutes();
 	}
 
 	/**
@@ -72,24 +81,72 @@ export class OrchestratorAPI {
 		await Promise.all([...this.pendingEvents]);
 	}
 
-	/** Bun.serve-compatible HTTP handler. */
-	async fetch(request: Request): Promise<Response> {
-		const url = new URL(request.url);
+	private setupRoutes(): void {
+		this.app.get("/health", (c) =>
+			c.json({ status: "ok", activeSessions: this.activeSessions.size })
+		);
 
-		if (request.method === "GET" && url.pathname === "/health") {
-			return Response.json({
-				status: "ok",
-				activeSessions: this.activeSessions.size
-			});
-		}
-
-		if (request.method === "POST" && url.pathname === "/events") {
-			const body = (await request.json()) as InboundEvent;
+		this.app.post("/events", async (c) => {
+			const body = (await c.req.json()) as InboundEvent;
 			this.handleEvent(body);
 			return new Response(null, { status: 202 });
-		}
+		});
 
-		return new Response("Not Found", { status: 404 });
+		this.app.get("/api/tasks", async (c) => {
+			const tasks = await this.deps.taskStore.listTasks();
+			return c.json(tasks);
+		});
+
+		this.app.get("/api/tasks/:id", async (c) => {
+			const id = c.req.param("id");
+			const task = await this.deps.taskStore.getTask(id);
+			if (!task) return c.json({ error: "Not found" }, 404);
+			const sessions = await this.deps.sessionStore.listSessions(id);
+			return c.json({ task, sessions });
+		});
+
+		this.app.get("/api/tasks/:id/messages", async (c) => {
+			const id = c.req.param("id");
+			const messages = await this.deps.taskStore.getTaskMessages(id);
+			return c.json(messages);
+		});
+
+		this.app.get("/api/sessions/:id/messages", async (c) => {
+			const sessionId = c.req.param("id");
+			if (!this.deps.agentMessageStore) return c.json([]);
+			const messages = await this.deps.agentMessageStore.getMessages(sessionId);
+			return c.json(messages);
+		});
+
+		this.app.get("/api/sessions/:id/stream", (c) => {
+			const sessionId = c.req.param("id");
+			const isActive = [...this.activeSessions.values()].some((s) => s.sessionId === sessionId);
+			if (!isActive) return c.json({ error: "Session not active" }, 404);
+
+			let ctrl: ReadableStreamDefaultController<Uint8Array>;
+			const stream = new ReadableStream<Uint8Array>({
+				start: (controller) => {
+					ctrl = controller;
+					this.sseBroadcaster?.register(sessionId, controller);
+				},
+				cancel: () => {
+					this.sseBroadcaster?.unregister(sessionId, ctrl);
+				}
+			});
+
+			return new Response(stream, {
+				headers: {
+					"Content-Type": "text/event-stream",
+					"Cache-Control": "no-cache",
+					Connection: "keep-alive"
+				}
+			});
+		});
+	}
+
+	/** Bun.serve-compatible HTTP handler. */
+	async fetch(request: Request): Promise<Response> {
+		return this.app.fetch(request);
 	}
 
 	/** Start HTTP server. */
