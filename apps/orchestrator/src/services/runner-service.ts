@@ -35,6 +35,7 @@ export interface RunnerServiceDeps {
 }
 
 export class RunnerService {
+	/** Keyed by AgentSession.id (not taskId) to support multiple sessions per task later. */
 	private readonly activeSessions = new Map<string, ActiveSession>();
 	private readonly pendingEvents = new Set<Promise<void>>();
 	private readonly deps: RunnerServiceDeps;
@@ -201,6 +202,7 @@ export class RunnerService {
 		if (session && session.runner.supportsInjection) {
 			session.runner.inject!(content);
 		} else {
+			// No active session — store as TaskMessage for context in the next session
 			await this.deps.taskStore.addTaskMessage({
 				taskId: task.id,
 				content,
