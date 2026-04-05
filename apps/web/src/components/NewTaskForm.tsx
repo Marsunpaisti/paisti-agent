@@ -11,6 +11,7 @@ export function NewTaskForm({ onClose }: Props) {
 	const [title, setTitle] = useState("");
 	const [message, setMessage] = useState("");
 	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 
@@ -18,25 +19,27 @@ export function NewTaskForm({ onClose }: Props) {
 		e.preventDefault();
 		if (!title.trim() || !message.trim()) return;
 		setSubmitting(true);
-		const taskId = crypto.randomUUID();
+		setError(null);
 		try {
-			await client.submitTask({
+			const taskId = await client.submitTask({
 				type: "task_assigned",
-				taskRef: { platform: "cli", id: taskId },
+				taskRef: { platform: "cli", id: crypto.randomUUID() },
 				title: title.trim(),
 				initialMessage: message.trim()
 			});
 			await queryClient.invalidateQueries({ queryKey: ["tasks"] });
 			navigate(`/tasks/${taskId}`);
 			onClose();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Submission failed");
 		} finally {
 			setSubmitting(false);
 		}
 	};
 
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: backdrop click-to-dismiss is a well-established UX pattern
-		// biome-ignore lint/a11y/useKeyWithClickEvents: Escape is handled at the dialog level via the browser default
+		// biome-ignore lint/a11y/noStaticElementInteractions: backdrop click-to-dismiss is standard UX
+		// biome-ignore lint/a11y/useKeyWithClickEvents: Escape is handled at the modal level by the browser
 		<div
 			className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
 			onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -45,11 +48,11 @@ export function NewTaskForm({ onClose }: Props) {
 				<h2 className="font-semibold text-lg mb-4">New Task</h2>
 				<form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-3">
 					<div>
-						<label htmlFor="new-task-title" className="block text-sm font-medium mb-1">
+						<label htmlFor="task-title" className="block text-sm font-medium mb-1">
 							Title
 						</label>
 						<input
-							id="new-task-title"
+							id="task-title"
 							className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
@@ -57,17 +60,18 @@ export function NewTaskForm({ onClose }: Props) {
 						/>
 					</div>
 					<div>
-						<label htmlFor="new-task-message" className="block text-sm font-medium mb-1">
+						<label htmlFor="task-message" className="block text-sm font-medium mb-1">
 							Initial message
 						</label>
 						<textarea
-							id="new-task-message"
+							id="task-message"
 							className="w-full border rounded px-3 py-2 text-sm h-28 resize-none focus:outline-none focus:ring-2 focus:ring-black"
 							value={message}
 							onChange={(e) => setMessage(e.target.value)}
 							placeholder="Describe what the agent should do…"
 						/>
 					</div>
+					{error && <p className="text-sm text-red-600">{error}</p>}
 					<div className="flex justify-end gap-2">
 						<button
 							type="button"

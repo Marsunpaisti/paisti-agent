@@ -21,7 +21,12 @@ export function useSessionStream(sessionId: string | null, onMessage: () => void
 		});
 
 		es.onerror = () => {
-			es.close();
+			// Only close permanently if the EventSource won't retry automatically.
+			// readyState CLOSED means a non-2xx response or permanent failure — don't reconnect.
+			// readyState CONNECTING means a transient network error — let the browser retry.
+			if (es.readyState === EventSource.CLOSED) {
+				es.close();
+			}
 		};
 
 		return () => {
