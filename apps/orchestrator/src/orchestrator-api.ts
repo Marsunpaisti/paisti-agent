@@ -10,12 +10,13 @@ import type {
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { eventsRouter } from "./routers/events-router.js";
-import { type ISseRegistrar, sessionsRouter } from "./routers/sessions-router.js";
+import { sessionsRouter } from "./routers/sessions-router.js";
 import { tasksRouter } from "./routers/tasks-router.js";
 import type { ActivityService } from "./services/activity-service.js";
 import { RunnerService } from "./services/runner-service.js";
 import { TaskService } from "./services/task-service.js";
 import type { InboundEvent, TaskAssignedEvent } from "./types/inbound-event.js";
+import type { ISseRegistrar } from "./types/sse-registrar.js";
 
 export interface OrchestratorDeps {
 	/** Called once per task to produce an isolated runner instance. */

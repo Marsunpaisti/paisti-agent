@@ -1,11 +1,7 @@
 import type { IAgentMessageReader } from "@paisti/core";
 import { Hono } from "hono";
 import type { RunnerService } from "../services/runner-service.js";
-
-export interface ISseRegistrar {
-	register(sessionId: string, controller: ReadableStreamDefaultController<Uint8Array>): void;
-	unregister(sessionId: string, controller: ReadableStreamDefaultController<Uint8Array>): void;
-}
+import type { ISseRegistrar } from "../types/sse-registrar.js";
 
 export function sessionsRouter(
 	agentMessageStore: IAgentMessageReader | undefined,

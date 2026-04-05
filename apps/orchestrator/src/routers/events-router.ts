@@ -5,7 +5,11 @@ import type { InboundEvent } from "../types/inbound-event.js";
 
 export function eventsRouter(taskService: TaskService, runnerService: RunnerService): Hono {
 	const router = new Hono();
-	const validTypes = new Set(["task_assigned", "user_comment", "stop_requested"]);
+	const validTypes = new Set<InboundEvent["type"]>([
+		"task_assigned",
+		"user_comment",
+		"stop_requested"
+	]);
 
 	router.post("/", async (c) => {
 		let body: InboundEvent;
