@@ -1,17 +1,26 @@
 import type {
 	AgentSessionStatus,
+	IAgentMessageReader,
 	IAgentRunner,
+	ISessionMessageWriter,
 	ISessionStore,
 	ITaskContextProvider,
 	ITaskStore,
 	OrchestrationTask,
 	RunConfig
 } from "@paisti/core";
+import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import { messageToActivities } from "./message-to-activities.js";
 import type { ActivityService } from "./services/activity-service.js";
 import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./types/inbound-event.js";
 
 const CLI_PLATFORM = "cli";
+
+interface ISseRegistrar {
+	register(sessionId: string, controller: ReadableStreamDefaultController<Uint8Array>): void;
+	unregister(sessionId: string, controller: ReadableStreamDefaultController<Uint8Array>): void;
+}
 
 export interface OrchestratorDeps {
 	/** Called once per task to produce an isolated runner instance. */
@@ -19,11 +28,15 @@ export interface OrchestratorDeps {
 	taskStore: ITaskStore;
 	sessionStore: ISessionStore;
 	activityService: ActivityService;
+	agentMessageStore?: IAgentMessageReader;
+	messageService?: ISessionMessageWriter;
+	sseBroadcaster?: ISseRegistrar;
 	contextProvider?: ITaskContextProvider;
 	/** Defaults to process.cwd(). Per-task worktrees are added in Phase 2. */
 	workingDirectory?: string;
 	defaultModel?: string;
 	systemPrompt?: string;
+	serveUiFrom?: string;
 }
 
 interface ActiveSession {
@@ -41,9 +54,12 @@ export class OrchestratorAPI {
 	private readonly activeSessions = new Map<string, ActiveSession>();
 	private readonly pendingEvents = new Set<Promise<void>>();
 	private server: ReturnType<typeof Bun.serve> | null = null;
+	private readonly app: Hono;
 
 	constructor(deps: OrchestratorDeps) {
 		this.deps = deps;
+		this.app = new Hono();
+		this.setupRoutes();
 	}
 
 	/**
@@ -72,24 +88,97 @@ export class OrchestratorAPI {
 		await Promise.all([...this.pendingEvents]);
 	}
 
+	private setupRoutes(): void {
+		this.app.get("/health", (c) =>
+			c.json({ status: "ok", activeSessions: this.activeSessions.size })
+		);
+
+		this.app.post("/events", async (c) => {
+			let body: InboundEvent;
+			try {
+				body = (await c.req.json()) as InboundEvent;
+			} catch {
+				return c.json({ error: "Invalid JSON" }, 400);
+			}
+			const validTypes = new Set(["task_assigned", "user_comment", "stop_requested"]);
+			if (!body || typeof body !== "object" || !validTypes.has(body.type)) {
+				return c.json({ error: "Unknown event type" }, 400);
+			}
+
+			if (body.type === "task_assigned") {
+				// Eagerly create task so GET /api/tasks/:id resolves immediately after the 202
+				const task = await this.resolveOrCreateTask(body.taskRef, body.title);
+				this.handleEvent(body);
+				return c.json({ taskId: task.id }, 202);
+			}
+
+			this.handleEvent(body);
+			return c.body(null, 202);
+		});
+
+		this.app.get("/api/tasks", async (c) => {
+			const tasks = await this.deps.taskStore.listTasks();
+			return c.json(tasks);
+		});
+
+		this.app.get("/api/tasks/:id", async (c) => {
+			const id = c.req.param("id");
+			const task = await this.deps.taskStore.getTask(id);
+			if (!task) return c.json({ error: "Not found" }, 404);
+			const sessions = await this.deps.sessionStore.listSessions(id);
+			return c.json({ task, sessions });
+		});
+
+		this.app.get("/api/tasks/:id/messages", async (c) => {
+			const id = c.req.param("id");
+			const messages = await this.deps.taskStore.getTaskMessages(id);
+			return c.json(messages);
+		});
+
+		this.app.get("/api/sessions/:id/messages", async (c) => {
+			const sessionId = c.req.param("id");
+			if (!this.deps.agentMessageStore) return c.json([]);
+			const messages = await this.deps.agentMessageStore.getMessages(sessionId);
+			return c.json(messages);
+		});
+
+		this.app.get("/api/sessions/:id/stream", (c) => {
+			const sessionId = c.req.param("id");
+			const isActive = [...this.activeSessions.values()].some((s) => s.sessionId === sessionId);
+			if (!isActive) return c.json({ error: "Session not active" }, 404);
+
+			let ctrl: ReadableStreamDefaultController<Uint8Array>;
+			const stream = new ReadableStream<Uint8Array>({
+				start: (controller) => {
+					ctrl = controller;
+					this.deps.sseBroadcaster?.register(sessionId, controller);
+				},
+				cancel: () => {
+					this.deps.sseBroadcaster?.unregister(sessionId, ctrl);
+				}
+			});
+
+			return new Response(stream, {
+				headers: {
+					"Content-Type": "text/event-stream",
+					"Cache-Control": "no-cache",
+					Connection: "keep-alive"
+				}
+			});
+		});
+
+		if (this.deps.serveUiFrom) {
+			const root = this.deps.serveUiFrom;
+			// Serve static assets
+			this.app.use("/*", serveStatic({ root }));
+			// SPA fallback — serve index.html for any unmatched route
+			this.app.get("/*", serveStatic({ root, path: "index.html" }));
+		}
+	}
+
 	/** Bun.serve-compatible HTTP handler. */
 	async fetch(request: Request): Promise<Response> {
-		const url = new URL(request.url);
-
-		if (request.method === "GET" && url.pathname === "/health") {
-			return Response.json({
-				status: "ok",
-				activeSessions: this.activeSessions.size
-			});
-		}
-
-		if (request.method === "POST" && url.pathname === "/events") {
-			const body = (await request.json()) as InboundEvent;
-			this.handleEvent(body);
-			return new Response(null, { status: 202 });
-		}
-
-		return new Response("Not Found", { status: 404 });
+		return this.app.fetch(request);
 	}
 
 	/** Start HTTP server. */
@@ -171,6 +260,11 @@ export class OrchestratorAPI {
 			const systemPrompt =
 				[context, this.deps.systemPrompt].filter(Boolean).join("\n\n") || undefined;
 
+			// Store systemPrompt on the session record before runner starts
+			if (systemPrompt) {
+				await this.deps.sessionStore.updateSession(agentSession.id, { systemPrompt });
+			}
+
 			const config: RunConfig = {
 				workingDirectory: this.deps.workingDirectory ?? process.cwd(),
 				userPrompt: initialMessage,
@@ -195,6 +289,10 @@ export class OrchestratorAPI {
 					await this.deps.activityService.postActivity(task.id, activity);
 				}
 
+				if (this.deps.messageService) {
+					await this.deps.messageService.writeMessage(agentSession.id, msg);
+				}
+
 				if (msg.type === "result" && msg.summary) {
 					await this.deps.activityService.postResponse(task.id, msg.summary);
 				}
@@ -204,6 +302,7 @@ export class OrchestratorAPI {
 			console.error(`[orchestrator] task ${task.id} runner error:`, err);
 		} finally {
 			this.activeSessions.delete(agentSession.id);
+			this.deps.messageService?.closeSession(agentSession.id);
 			await this.deps.sessionStore.updateSession(agentSession.id, {
 				status: finalStatus,
 				completedAt: new Date().toISOString()

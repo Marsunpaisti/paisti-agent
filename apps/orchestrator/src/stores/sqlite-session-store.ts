@@ -24,10 +24,17 @@ export class SqliteSessionStore implements ISessionStore {
 				role TEXT,
 				status TEXT NOT NULL DEFAULT 'active',
 				provider_session_id TEXT,
+				system_prompt TEXT,
 				started_at TEXT NOT NULL,
 				completed_at TEXT
 			)
 		`);
+		// Migration guard for DBs created before system_prompt column was added
+		try {
+			this.db.run("ALTER TABLE agent_sessions ADD COLUMN system_prompt TEXT");
+		} catch {
+			// column already exists
+		}
 	}
 
 	async createSession(input: CreateSessionInput): Promise<AgentSession> {
@@ -56,7 +63,9 @@ export class SqliteSessionStore implements ISessionStore {
 
 	async updateSession(
 		id: string,
-		patch: Partial<Pick<AgentSession, "status" | "providerSessionId" | "completedAt">>
+		patch: Partial<
+			Pick<AgentSession, "status" | "providerSessionId" | "completedAt" | "systemPrompt">
+		>
 	): Promise<AgentSession> {
 		const setClauses: string[] = [];
 		const values: unknown[] = [];
@@ -72,6 +81,10 @@ export class SqliteSessionStore implements ISessionStore {
 		if (patch.completedAt !== undefined) {
 			setClauses.push("completed_at = ?");
 			values.push(patch.completedAt);
+		}
+		if (patch.systemPrompt !== undefined) {
+			setClauses.push("system_prompt = ?");
+			values.push(patch.systemPrompt);
 		}
 
 		if (setClauses.length > 0) {
@@ -114,6 +127,7 @@ interface RawSession {
 	role: string | null;
 	status: string;
 	provider_session_id: string | null;
+	system_prompt: string | null;
 	started_at: string;
 	completed_at: string | null;
 }
@@ -125,6 +139,7 @@ function toSession(row: RawSession): AgentSession {
 		...(row.role ? { role: row.role as AgentSession["role"] } : {}),
 		status: row.status as AgentSessionStatus,
 		...(row.provider_session_id ? { providerSessionId: row.provider_session_id } : {}),
+		...(row.system_prompt !== null ? { systemPrompt: row.system_prompt } : {}),
 		startedAt: row.started_at,
 		...(row.completed_at ? { completedAt: row.completed_at } : {})
 	};

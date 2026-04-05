@@ -657,3 +657,140 @@ describe("runTask — contextProvider", () => {
 		expect(capturing.capturedConfig?.systemPrompt).toBe("You are a helpful assistant.");
 	});
 });
+
+// ─── REST API routes ──────────────────────────────────────────────────────────
+
+describe("GET /api/tasks", () => {
+	it("returns empty array when no tasks exist", async () => {
+		const res = await api.fetch(new Request("http://localhost/api/tasks"));
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body).toEqual([]);
+	});
+
+	it("returns tasks after one is created", async () => {
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: crypto.randomUUID() },
+			title: "My task",
+			initialMessage: "Do the thing"
+		});
+		const res = await api.fetch(new Request("http://localhost/api/tasks"));
+		const body = (await res.json()) as Array<{ title: string }>;
+		expect(body).toHaveLength(1);
+		expect(body[0].title).toBe("My task");
+	});
+});
+
+describe("GET /api/tasks/:id", () => {
+	it("returns 404 for unknown task", async () => {
+		const res = await api.fetch(new Request("http://localhost/api/tasks/nonexistent"));
+		expect(res.status).toBe(404);
+	});
+
+	it("returns task and its sessions", async () => {
+		const taskId = crypto.randomUUID();
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "My task",
+			initialMessage: "Do the thing"
+		});
+		const res = await api.fetch(new Request(`http://localhost/api/tasks/${taskId}`));
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as {
+			task: { id: string };
+			sessions: Array<{ taskId: string }>;
+		};
+		expect(body.task.id).toBe(taskId);
+		expect(body.sessions).toHaveLength(1);
+		expect(body.sessions[0].taskId).toBe(taskId);
+	});
+});
+
+describe("GET /api/tasks/:id/messages", () => {
+	it("returns empty array when no user comments exist", async () => {
+		const taskId = crypto.randomUUID();
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "My task",
+			initialMessage: "Do the thing"
+		});
+		const res = await api.fetch(new Request(`http://localhost/api/tasks/${taskId}/messages`));
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body).toEqual([]);
+	});
+});
+
+describe("GET /api/sessions/:id/messages", () => {
+	it("returns empty array when no messages stored", async () => {
+		const taskId = crypto.randomUUID();
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "My task",
+			initialMessage: "Do the thing"
+		});
+		const task = await store.getTask(taskId);
+		const sessions = await sessionStore.listSessions(task!.id);
+		const res = await api.fetch(
+			new Request(`http://localhost/api/sessions/${sessions[0].id}/messages`)
+		);
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body).toEqual([]);
+	});
+});
+
+describe("GET /api/sessions/:id/stream", () => {
+	it("returns 404 for a session that is not active", async () => {
+		const res = await api.fetch(new Request("http://localhost/api/sessions/nonexistent/stream"));
+		expect(res.status).toBe(404);
+	});
+});
+
+describe("fetch — POST /events validation", () => {
+	it("returns 400 for invalid JSON", async () => {
+		const res = await api.fetch(
+			new Request("http://localhost/events", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: "not json"
+			})
+		);
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 400 for unknown event type", async () => {
+		const res = await api.fetch(
+			new Request("http://localhost/events", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ type: "unknown_event" })
+			})
+		);
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 202 with taskId for task_assigned event", async () => {
+		const taskId = crypto.randomUUID();
+		const res = await api.fetch(
+			new Request("http://localhost/events", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					type: "task_assigned",
+					taskRef: { platform: "cli", id: taskId },
+					title: "Test task",
+					initialMessage: "Do the thing"
+				})
+			})
+		);
+		expect(res.status).toBe(202);
+		const body = (await res.json()) as { taskId: string };
+		expect(body.taskId).toBe(taskId);
+		await api.flush();
+	});
+});

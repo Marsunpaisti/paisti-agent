@@ -77,6 +77,19 @@ describe("updateSession", () => {
 			"Session not found: nonexistent"
 		);
 	});
+
+	it("updates systemPrompt", async () => {
+		const session = await store.createSession({ taskId: "task-1" });
+		const updated = await store.updateSession(session.id, {
+			systemPrompt: "You are a helpful assistant."
+		});
+		expect(updated.systemPrompt).toBe("You are a helpful assistant.");
+	});
+
+	it("systemPrompt is undefined when not set", async () => {
+		const session = await store.createSession({ taskId: "task-1" });
+		expect(session.systemPrompt).toBeUndefined();
+	});
 });
 
 describe("listSessions", () => {
