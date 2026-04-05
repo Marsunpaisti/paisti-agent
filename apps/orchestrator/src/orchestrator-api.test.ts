@@ -708,6 +708,22 @@ describe("GET /api/tasks/:id", () => {
 	});
 });
 
+describe("GET /api/tasks/:id/messages", () => {
+	it("returns empty array when no user comments exist", async () => {
+		const taskId = crypto.randomUUID();
+		await api.runTask({
+			type: "task_assigned",
+			taskRef: { platform: "cli", id: taskId },
+			title: "My task",
+			initialMessage: "Do the thing"
+		});
+		const res = await api.fetch(new Request(`http://localhost/api/tasks/${taskId}/messages`));
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body).toEqual([]);
+	});
+});
+
 describe("GET /api/sessions/:id/messages", () => {
 	it("returns empty array when no messages stored", async () => {
 		const taskId = crypto.randomUUID();

@@ -89,7 +89,7 @@ export class OrchestratorAPI {
 		this.app.post("/events", async (c) => {
 			const body = (await c.req.json()) as InboundEvent;
 			this.handleEvent(body);
-			return new Response(null, { status: 202 });
+			return c.body(null, 202);
 		});
 
 		this.app.get("/api/tasks", async (c) => {
