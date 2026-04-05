@@ -19,6 +19,10 @@ export class SqliteAgentMessageWriter implements IAgentMessageStore {
 				message TEXT NOT NULL
 			)
 		`);
+		this.db.run(`
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_session_messages_seq
+			ON session_messages(session_id, sequence)
+		`);
 	}
 
 	async writeMessage(sessionId: string, sequence: number, message: AgentMessage): Promise<void> {
