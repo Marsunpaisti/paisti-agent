@@ -8,8 +8,17 @@ export interface StoredAgentMessage {
 
 export interface IAgentMessageWriter {
 	writeMessage(sessionId: string, sequence: number, message: AgentMessage): Promise<void>;
+	/** Optional lifecycle hook — called when a session ends. */
+	closeSession?(sessionId: string): void;
 }
 
-export interface IAgentMessageStore extends IAgentMessageWriter {
+export interface IAgentMessageReader {
 	getMessages(sessionId: string): Promise<StoredAgentMessage[]>;
+}
+
+export interface IAgentMessageStore extends IAgentMessageWriter, IAgentMessageReader {}
+
+export interface ISessionMessageWriter {
+	writeMessage(sessionId: string, message: AgentMessage): Promise<void>;
+	closeSession(sessionId: string): void;
 }

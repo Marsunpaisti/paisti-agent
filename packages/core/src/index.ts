@@ -1,7 +1,9 @@
 export type { ActionActivity, Activity, IActivityWriter, ThoughtActivity } from "./activity.js";
 export type {
+	IAgentMessageReader,
 	IAgentMessageStore,
 	IAgentMessageWriter,
+	ISessionMessageWriter,
 	StoredAgentMessage
 } from "./agent-message-store.js";
 export type {
