@@ -139,7 +139,7 @@ function toSession(row: RawSession): AgentSession {
 		...(row.role ? { role: row.role as AgentSession["role"] } : {}),
 		status: row.status as AgentSessionStatus,
 		...(row.provider_session_id ? { providerSessionId: row.provider_session_id } : {}),
-		...(row.system_prompt ? { systemPrompt: row.system_prompt } : {}),
+		...(row.system_prompt !== null ? { systemPrompt: row.system_prompt } : {}),
 		startedAt: row.started_at,
 		...(row.completed_at ? { completedAt: row.completed_at } : {})
 	};
