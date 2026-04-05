@@ -751,10 +751,10 @@ describe("GET /api/sessions/:id/stream", () => {
 	});
 });
 
-describe("fetch — POST /events validation", () => {
+describe("fetch — POST /api/events validation", () => {
 	it("returns 400 for invalid JSON", async () => {
 		const res = await api.fetch(
-			new Request("http://localhost/events", {
+			new Request("http://localhost/api/events", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: "not json"
@@ -765,7 +765,7 @@ describe("fetch — POST /events validation", () => {
 
 	it("returns 400 for unknown event type", async () => {
 		const res = await api.fetch(
-			new Request("http://localhost/events", {
+			new Request("http://localhost/api/events", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ type: "unknown_event" })
@@ -777,7 +777,7 @@ describe("fetch — POST /events validation", () => {
 	it("returns 202 with taskId for task_assigned event", async () => {
 		const taskId = crypto.randomUUID();
 		const res = await api.fetch(
-			new Request("http://localhost/events", {
+			new Request("http://localhost/api/events", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({

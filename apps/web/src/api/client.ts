@@ -15,9 +15,8 @@ export const client = {
 
 	getSessionMessages: (id: string) => get<StoredAgentMessage[]>(`/sessions/${id}/messages`),
 
-	// POST /events is an inbound-event endpoint, not a REST resource — it lives outside /api
 	async submitTask(event: TaskAssignedEvent): Promise<string> {
-		const res = await fetch("/events", {
+		const res = await fetch("/api/events", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(event)
