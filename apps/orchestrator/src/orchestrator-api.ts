@@ -11,6 +11,7 @@ import type {
 import { Hono } from "hono";
 import { messageToActivities } from "./message-to-activities.js";
 import type { ActivityService } from "./services/activity-service.js";
+import type { MessageService } from "./services/message-service.js";
 import type { SseBroadcaster } from "./services/sse-broadcaster.js";
 import type { InboundEvent, TaskAssignedEvent, TaskRef } from "./types/inbound-event.js";
 
@@ -23,6 +24,8 @@ export interface OrchestratorDeps {
 	sessionStore: ISessionStore;
 	activityService: ActivityService;
 	agentMessageStore?: IAgentMessageStore;
+	messageService?: MessageService;
+	sseBroadcaster?: SseBroadcaster;
 	contextProvider?: ITaskContextProvider;
 	/** Defaults to process.cwd(). Per-task worktrees are added in Phase 2. */
 	workingDirectory?: string;
@@ -51,6 +54,7 @@ export class OrchestratorAPI {
 
 	constructor(deps: OrchestratorDeps) {
 		this.deps = deps;
+		this.sseBroadcaster = deps.sseBroadcaster;
 		this.app = new Hono();
 		this.setupRoutes();
 	}
@@ -228,6 +232,11 @@ export class OrchestratorAPI {
 			const systemPrompt =
 				[context, this.deps.systemPrompt].filter(Boolean).join("\n\n") || undefined;
 
+			// Store systemPrompt on the session record before runner starts
+			if (systemPrompt) {
+				await this.deps.sessionStore.updateSession(agentSession.id, { systemPrompt });
+			}
+
 			const config: RunConfig = {
 				workingDirectory: this.deps.workingDirectory ?? process.cwd(),
 				userPrompt: initialMessage,
@@ -252,6 +261,10 @@ export class OrchestratorAPI {
 					await this.deps.activityService.postActivity(task.id, activity);
 				}
 
+				if (this.deps.messageService) {
+					await this.deps.messageService.writeMessage(agentSession.id, msg);
+				}
+
 				if (msg.type === "result" && msg.summary) {
 					await this.deps.activityService.postResponse(task.id, msg.summary);
 				}
@@ -261,6 +274,7 @@ export class OrchestratorAPI {
 			console.error(`[orchestrator] task ${task.id} runner error:`, err);
 		} finally {
 			this.activeSessions.delete(agentSession.id);
+			this.deps.messageService?.closeSession(agentSession.id);
 			await this.deps.sessionStore.updateSession(agentSession.id, {
 				status: finalStatus,
 				completedAt: new Date().toISOString()
