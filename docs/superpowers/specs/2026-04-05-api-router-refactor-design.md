@@ -30,7 +30,7 @@ apps/orchestrator/src/
   routers/
     tasks-router.ts          ← GET /api/tasks/**
     sessions-router.ts       ← GET /api/sessions/**
-    events-router.ts         ← POST /events
+    events-router.ts         ← POST /api/events
   orchestrator-api.ts        ← HTTP wiring only (shrunk)
 ```
 
@@ -125,10 +125,18 @@ constructor(deps: OrchestratorDeps) {
   this.app.get('/health', ...)
   this.app.route('/api/tasks', tasksRouter(deps.taskStore, deps.sessionStore))
   this.app.route('/api/sessions', sessionsRouter(deps.agentMessageStore, deps.sseBroadcaster, runnerService))
-  this.app.route('/events', eventsRouter(taskService, runnerService))
+  this.app.route('/api/events', eventsRouter(taskService, runnerService))
   // static UI if configured
 }
 ```
+
+## Breaking Change: /events → /api/events
+
+`POST /events` is renamed to `POST /api/events`. The following callers must be updated as part of this refactor:
+
+- `apps/web/src/api/client.ts` — update `fetch("/events", ...)` to `fetch("/api/events", ...)` and remove the comment justifying the old path
+- `apps/web/vite.config.ts` — update the dev proxy key from `"/events"` to `"/api/events"`
+- `apps/orchestrator/src/orchestrator-api.test.ts` — update all three test requests from `/events` to `/api/events`
 
 ## Testing
 
