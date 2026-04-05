@@ -9,6 +9,7 @@ export interface AgentSession {
 	role?: AgentSessionRole; // undefined in Phase 1
 	status: AgentSessionStatus;
 	providerSessionId?: string; // SDK session ID, captured from SystemInfoMessage
+	systemPrompt?: string;
 	startedAt: string; // ISO 8601
 	completedAt?: string; // ISO 8601; absent while active
 }
@@ -23,7 +24,9 @@ export interface ISessionStore {
 	getSession(id: string): Promise<AgentSession | null>;
 	updateSession(
 		id: string,
-		patch: Partial<Pick<AgentSession, "status" | "providerSessionId" | "completedAt">>
+		patch: Partial<
+			Pick<AgentSession, "status" | "providerSessionId" | "completedAt" | "systemPrompt">
+		>
 	): Promise<AgentSession>;
 	/** Returns all sessions for the task ordered by startedAt ascending. */
 	listSessions(taskId: string): Promise<AgentSession[]>;

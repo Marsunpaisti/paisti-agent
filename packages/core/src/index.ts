@@ -1,5 +1,10 @@
 export type { ActionActivity, Activity, IActivityWriter, ThoughtActivity } from "./activity.js";
 export type {
+	IAgentMessageStore,
+	IAgentMessageWriter,
+	StoredAgentMessage
+} from "./agent-message-store.js";
+export type {
 	AgentMessage,
 	AssistantMessage,
 	AssistantPart,
