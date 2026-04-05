@@ -1,5 +1,14 @@
 {
 	"editor.defaultFormatter": "biomejs.biome",
 	"editor.formatOnSave": true,
-	"typescript.tsdk": "node_modules/typescript/lib"
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"files.exclude": {
+		".worktrees": true
+	},
+	"search.exclude": {
+		".worktrees": true
+	},
+	"files.watcherExclude": {
+		"**/.worktrees/**": true
+	}
 }

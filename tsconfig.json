@@ -7,5 +7,5 @@
 		"skipLibCheck": true,
 		"noEmit": true
 	},
-	"exclude": ["node_modules", "**/dist", "**/node_modules"]
+	"exclude": ["node_modules", "**/dist", "**/node_modules", ".worktrees"]
 }
