@@ -17,9 +17,7 @@ export class MessageService {
 	closeSession(sessionId: string): void {
 		this.sequences.delete(sessionId);
 		for (const writer of this.writers) {
-			if ("closeSession" in writer && typeof writer.closeSession === "function") {
-				(writer as { closeSession: (id: string) => void }).closeSession(sessionId);
-			}
+			writer.closeSession?.(sessionId);
 		}
 	}
 }
