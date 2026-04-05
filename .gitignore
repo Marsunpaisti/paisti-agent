@@ -3,7 +3,7 @@
 **/.env.*
 **/node_modules
 **/dist
-**/public
+apps/orchestrator/public/web
 **/*.tsbuildinfo
 **/build
 **/coverage

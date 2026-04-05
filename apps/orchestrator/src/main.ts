@@ -29,7 +29,7 @@ const contextProvider = new LocalTaskContextProvider(taskStore, sessionStore);
 let serveUiFrom: string | undefined;
 const serveUiEnv = process.env.SERVE_UI;
 if (serveUiEnv !== "false" && serveUiEnv !== "0") {
-	const uiPath = serveUiEnv ? serveUiEnv : resolve(import.meta.dir, "../public");
+	const uiPath = serveUiEnv ? serveUiEnv : resolve(import.meta.dir, "../public/web");
 	if (existsSync(`${uiPath}/index.html`)) {
 		serveUiFrom = uiPath;
 	} else if (serveUiEnv) {

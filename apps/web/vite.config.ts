@@ -7,7 +7,7 @@ export default defineConfig({
 	build: {
 		// Output directly into the orchestrator's public/ directory so `bun start`
 		// serves the UI automatically without any extra configuration.
-		outDir: "../orchestrator/public",
+		outDir: "../orchestrator/public/web",
 		emptyOutDir: true
 	},
 	server: {
