@@ -26,11 +26,11 @@ The server starts on port 3000 by default.
 
 ### Orchestrator + web client
 
-Build the UI first, then start the server with `SERVE_UI=true`:
+Build the UI, then start the server. The orchestrator automatically serves the UI when the built files are present.
 
 ```bash
 bun run --filter '@paisti/web' build
-SERVE_UI=true bun run --filter '@paisti/orchestrator' start
+bun run --filter '@paisti/orchestrator' start
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -53,7 +53,7 @@ cd apps/web && bun run dev   # http://localhost:5173
 |---|---|---|
 | `PORT` | `3000` | HTTP listen port |
 | `DB_PATH` | `paisti.db` | SQLite database path |
-| `SERVE_UI` | — | Set to `true` to serve the built web UI. Can also be an explicit path to a `dist/` directory. |
+| `SERVE_UI` | — | Override the UI path (e.g. `/custom/path`), or set to `false` to disable serving even when built files exist. Normally not needed. |
 | `MODEL` | — | Default Claude model (e.g. `claude-opus-4-6`) |
 | `SYSTEM_PROMPT` | — | Extra system prompt prepended to every task's context |
 

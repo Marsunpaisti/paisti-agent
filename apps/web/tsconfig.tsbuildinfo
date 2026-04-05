@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/api/client.ts","./src/api/types.ts","./src/components/chatview.tsx","./src/components/messageitem.tsx","./src/components/newtaskform.tsx","./src/components/taskdetail.tsx","./src/components/tasklist.tsx","./src/hooks/usesession.ts","./src/hooks/usesessionstream.ts","./src/hooks/usetasks.ts"],"version":"6.0.2"}

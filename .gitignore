@@ -3,6 +3,8 @@
 **/.env.*
 **/node_modules
 **/dist
+**/public
+**/*.tsbuildinfo
 **/build
 **/coverage
 **/logs

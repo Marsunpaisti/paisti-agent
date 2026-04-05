@@ -22,21 +22,23 @@ const activityService = new ActivityService([new ConsoleActivityWriter()]);
 const messageService = new MessageService([agentMessageWriter, sseBroadcaster]);
 const contextProvider = new LocalTaskContextProvider(taskStore, sessionStore);
 
-// SERVE_UI can be "true"/"1" (uses default dist path) or an explicit path to the web dist directory
+// Serve the web UI if the built files are present.
+// Default output directory: apps/orchestrator/public/ (written by `bun run --filter '@paisti/web' build`).
+// Override: SERVE_UI=<path>  — serve from an explicit directory instead.
+// Disable:  SERVE_UI=false   — skip serving even when the default directory exists.
 let serveUiFrom: string | undefined;
 const serveUiEnv = process.env.SERVE_UI;
-if (serveUiEnv) {
-	const uiPath =
-		serveUiEnv === "true" || serveUiEnv === "1"
-			? resolve(import.meta.dir, "../../web/dist")
-			: serveUiEnv;
+if (serveUiEnv !== "false" && serveUiEnv !== "0") {
+	const uiPath = serveUiEnv ? serveUiEnv : resolve(import.meta.dir, "../public");
 	if (existsSync(`${uiPath}/index.html`)) {
 		serveUiFrom = uiPath;
-	} else {
+	} else if (serveUiEnv) {
+		// User explicitly pointed at a path that doesn't exist — warn.
 		console.warn(
-			`[orchestrator] SERVE_UI: ${uiPath} does not contain index.html — static serving disabled. Build apps/web first or set SERVE_UI=<path-to-dist>.`
+			`[orchestrator] SERVE_UI: ${uiPath} does not contain index.html — static serving disabled.`
 		);
 	}
+	// If unset and default path doesn't exist, silently skip (normal headless mode).
 }
 
 const orchestrator = new OrchestratorAPI({
