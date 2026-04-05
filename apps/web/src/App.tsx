@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { NewTaskForm } from "./components/NewTaskForm.js";
 import { TaskDetail } from "./components/TaskDetail.js";
 import { TaskList } from "./components/TaskList.js";
 
 export function App() {
 	const [showNewTask, setShowNewTask] = useState(false);
-	void showNewTask;
 
 	return (
 		<BrowserRouter>
@@ -28,6 +28,7 @@ export function App() {
 					</Routes>
 				</main>
 			</div>
+			{showNewTask && <NewTaskForm onClose={() => setShowNewTask(false)} />}
 		</BrowserRouter>
 	);
 }
