@@ -19,6 +19,8 @@ export function tasksRouter(taskStore: ITaskStore, sessionStore: ISessionStore):
 
 	router.get("/:id/messages", async (c) => {
 		const id = c.req.param("id");
+		const task = await taskStore.getTask(id);
+		if (!task) return c.json({ error: "Not found" }, 404);
 		const messages = await taskStore.getTaskMessages(id);
 		return c.json(messages);
 	});

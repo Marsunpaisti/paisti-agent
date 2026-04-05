@@ -27,14 +27,14 @@ export function sessionsRouter(
 			return c.json({ error: "Session not active" }, 404);
 		}
 
-		let ctrl: ReadableStreamDefaultController<Uint8Array>;
+		let ctrl: ReadableStreamDefaultController<Uint8Array> | undefined;
 		const stream = new ReadableStream<Uint8Array>({
 			start: (controller) => {
 				ctrl = controller;
 				sseBroadcaster?.register(sessionId, controller);
 			},
 			cancel: () => {
-				sseBroadcaster?.unregister(sessionId, ctrl);
+				if (ctrl) sseBroadcaster?.unregister(sessionId, ctrl);
 			}
 		});
 
