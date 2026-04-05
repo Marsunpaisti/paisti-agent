@@ -9,6 +9,7 @@ import type {
 	RunConfig
 } from "@paisti/core";
 import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import { messageToActivities } from "./message-to-activities.js";
 import type { ActivityService } from "./services/activity-service.js";
 import type { MessageService } from "./services/message-service.js";
@@ -146,6 +147,14 @@ export class OrchestratorAPI {
 				}
 			});
 		});
+
+		if (this.deps.serveUiFrom) {
+			const root = this.deps.serveUiFrom;
+			// Serve static assets
+			this.app.use("/*", serveStatic({ root }));
+			// SPA fallback — serve index.html for any unmatched route
+			this.app.get("/*", serveStatic({ path: `${root}/index.html` }));
+		}
 	}
 
 	/** Bun.serve-compatible HTTP handler. */
